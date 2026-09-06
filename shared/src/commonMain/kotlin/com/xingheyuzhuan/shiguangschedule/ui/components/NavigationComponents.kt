@@ -35,8 +35,11 @@ import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.account_circle_24px
 import shiguangschedule.shared.generated.resources.account_circle_filled_24px
 import shiguangschedule.shared.generated.resources.nav_course_schedule
+import shiguangschedule.shared.generated.resources.nav_service
 import shiguangschedule.shared.generated.resources.nav_settings
 import shiguangschedule.shared.generated.resources.nav_today_schedule
+import shiguangschedule.shared.generated.resources.service_24px
+import shiguangschedule.shared.generated.resources.service_filled_24px
 import shiguangschedule.shared.generated.resources.view_agenda_24px
 import shiguangschedule.shared.generated.resources.view_agenda_filled_24px
 import shiguangschedule.shared.generated.resources.view_week_24px
@@ -75,6 +78,12 @@ fun AdaptiveNavigationScaffold(
             destination = Destination.CourseSchedule,
             selectedIcon = vectorResource(Res.drawable.view_week_filled_24px),
             unselectedIcon = vectorResource(Res.drawable.view_week_24px)
+        ),
+        NavItemData(
+            label = stringResource(Res.string.nav_service),
+            destination = Destination.Service,
+            selectedIcon = vectorResource(Res.drawable.service_filled_24px),
+            unselectedIcon = vectorResource(Res.drawable.service_24px)
         ),
         NavItemData(
             label = stringResource(Res.string.nav_settings),

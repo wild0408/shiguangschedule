@@ -30,6 +30,7 @@
     <string name="floating_course_hint">已掛起，左右滑周點擊空白處放下</string>
     <string name="nav_today_schedule">今日課表</string>
     <string name="nav_course_schedule">課表</string>
+    <string name="nav_service">服務</string>
     <string name="nav_settings">我的</string>
     <string name="title_today_schedule">今日課表</string>
     <string name="text_no_courses_today">今天沒有課程</string>

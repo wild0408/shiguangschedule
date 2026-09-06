@@ -30,6 +30,7 @@
     <!-- 主界面及今日课表 -->
     <string name="nav_today_schedule">今日课表</string>
     <string name="nav_course_schedule">课表</string>
+    <string name="nav_service">服务</string>
     <string name="nav_settings">我的</string>
     <string name="title_today_schedule">今日课表</string>
     <string name="text_no_courses_today">今天没有课程</string>

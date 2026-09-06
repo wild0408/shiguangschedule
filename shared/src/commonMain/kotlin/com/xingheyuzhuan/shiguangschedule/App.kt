@@ -50,6 +50,7 @@ import com.xingheyuzhuan.shiguangschedule.ui.settings.time.TimeSlotManagementScr
 import com.xingheyuzhuan.shiguangschedule.ui.settings.update.UpdateRepoScreen
 import com.xingheyuzhuan.shiguangschedule.ui.theme.ShiguangScheduleTheme
 import com.xingheyuzhuan.shiguangschedule.ui.today.TodayScheduleScreen
+import com.xingheyuzhuan.shiguangschedule.ui.service.ServiceScreen
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -167,6 +168,7 @@ fun ScreenContent(
         Destination.CourseSchedule -> WeeklyScheduleScreen(onNavigate, onBack)
         Destination.Settings -> SettingsScreen(onNavigate, onBack)
         Destination.TodaySchedule -> TodayScheduleScreen(onNavigate, onBack)
+        Destination.Service -> ServiceScreen(onNavigate, onBack)
         Destination.TimeSlotSettings -> TimeSlotManagementScreen(onBack)
         Destination.ManageCourseTables -> ManageCourseTablesScreen(onBack)
         Destination.SchoolSelectionListScreen -> SchoolSelectionListScreen(onNavigate, onBack)
