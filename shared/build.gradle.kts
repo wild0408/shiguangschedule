@@ -174,6 +174,14 @@ val packSchoolsZip = tasks.register<Zip>("packSchoolsZip") {
     archiveFileName.set("offline_schools.zip")
 }
 
+val packGradesZip = tasks.register<Zip>("packGradesZip") {
+    group = "build"
+    description = "将独立成绩适配资源打包为 Compose Resources ZIP。"
+    from(layout.projectDirectory.dir("assets/offline_grade_repo"))
+    destinationDirectory.set(layout.projectDirectory.dir("src/commonMain/composeResources/files"))
+    archiveFileName.set("offline_grades.zip")
+}
+
 // 绑定生成 Task 至 Compose Resources 编译生命周期
 val exportLibraryDefinitions = tasks.named("exportLibraryDefinitions")
 
@@ -183,5 +191,6 @@ tasks.matching {
             it.name.startsWith("prepareComposeResources")
 }.configureEach {
     dependsOn(packSchoolsZip)
+    dependsOn(packGradesZip)
     dependsOn(exportLibraryDefinitions)
 }

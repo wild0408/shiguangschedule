@@ -1,6 +1,9 @@
 package com.xingheyuzhuan.shiguangschedule.ui.schoolselection.web
 
 import com.xingheyuzhuan.shiguangschedule.data.model.CourseImportExport
+import com.xingheyuzhuan.shiguangschedule.data.parser.parseGradeRecords
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeImportStore
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeRepository
 import com.xingheyuzhuan.shiguangschedule.data.repository.CourseConversionRepository
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
 import kotlinx.coroutines.CoroutineScope
@@ -17,6 +20,7 @@ class WebBridgeHandler(
     private val coroutineScope: CoroutineScope,
     private val uiEventChannel: SendChannel<WebUiEvent>,
     private val courseConversionRepository: CourseConversionRepository,
+    private val gradeRepository: GradeRepository,
     private val onTaskCompleted: () -> Unit,
     private val evaluateJs: (script: String, callback: ((String?) -> Unit)?) -> Unit
 ) {
@@ -57,6 +61,10 @@ class WebBridgeHandler(
 
                 "saveImportedCourses" -> parsePayload<SaveCoursesPayload>(message.payload)?.let {
                     saveImportedCourses(it.coursesJsonString, callbackId)
+                }
+
+                "saveImportedGrades" -> parsePayload<SaveGradesPayload>(message.payload)?.let {
+                    saveImportedGrades(it.gradesJsonString, callbackId)
                 }
 
                 "saveCourseConfig" -> parsePayload<SaveConfigPayload>(message.payload)?.let {
@@ -221,6 +229,31 @@ class WebBridgeHandler(
                 }.onFailure { e ->
                     ToastManager.show("课程导入失败: ${e.message}")
                     if (callbackId != null) rejectJsPromise(callbackId, "课程导入失败: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /** 解析脚本输出的统一成绩数据，并在通知页面完成前写入本地数据库。 */
+    fun saveImportedGrades(gradesJsonString: String, callbackId: String? = null) {
+        coroutineScope.launch(Dispatchers.Default) {
+            val result = try {
+                val records = parseGradeRecords(gradesJsonString).also {
+                    require(it.isNotEmpty()) { "脚本未返回有效成绩记录。" }
+                }
+                gradeRepository.replaceAll(records)
+                Result.success(records)
+            } catch (error: Throwable) {
+                Result.failure(error)
+            }
+            coroutineScope.launch(Dispatchers.Main) {
+                result.onSuccess { records ->
+                    GradeImportStore.replace(records)
+                    ToastManager.show("已解析 ${records.size} 条成绩记录。")
+                    if (callbackId != null) resolveJsPromise(callbackId, records.size.toString())
+                }.onFailure { error ->
+                    ToastManager.show("成绩解析失败: ${error.message}")
+                    if (callbackId != null) rejectJsPromise(callbackId, "成绩解析失败: ${error.message}")
                 }
             }
         }

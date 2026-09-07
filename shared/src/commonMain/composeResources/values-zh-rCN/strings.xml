@@ -38,6 +38,7 @@
     <string name="desc_grade_empty">通过教务系统导入成绩后，这里会显示学期统计和课程明细。</string>
     <string name="action_import_grade">导入成绩</string>
     <string name="label_current_semester">当前学期</string>
+    <string name="label_all_semesters">全部学期</string>
     <string name="label_gpa">平均绩点</string>
     <string name="label_credits">总学分</string>
     <string name="label_course_count">课程数</string>

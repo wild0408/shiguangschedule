@@ -15,11 +15,13 @@ import com.xingheyuzhuan.shiguangschedule.data.di.AppStorage
         CourseWeek::class,
         TimeSlot::class,
         CourseTableConfig::class
+        ,GradeEntity::class
     ],
-    version = 5,
+    version = 6,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5, spec = MainAppDatabase.RemoveAppSettingsSpec::class)
+        ,AutoMigration(from = 5, to = 6)
     ],
     exportSchema = true
 )
@@ -34,6 +36,7 @@ abstract class MainAppDatabase : RoomDatabase() {
     abstract fun courseWeekDao(): CourseWeekDao
     abstract fun timeSlotDao(): TimeSlotDao
     abstract fun courseTableConfigDao(): CourseTableConfigDao
+    abstract fun gradeDao(): GradeDao
 
     companion object {
         fun getDatabase(appStorage: AppStorage): MainAppDatabase {

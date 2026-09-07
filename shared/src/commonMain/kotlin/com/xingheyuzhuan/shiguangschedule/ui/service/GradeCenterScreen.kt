@@ -31,10 +31,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -42,8 +43,11 @@ import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.model.GradeRecord
 import com.xingheyuzhuan.shiguangschedule.data.model.GradeSemesterSummary
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeImportStore
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeRepository
+import kotlinx.coroutines.flow.map
+import org.koin.compose.koinInject
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdaptiveNavigationScaffold
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
@@ -55,6 +59,7 @@ import shiguangschedule.shared.generated.resources.desc_grade_empty
 import shiguangschedule.shared.generated.resources.label_course_count
 import shiguangschedule.shared.generated.resources.label_credits
 import shiguangschedule.shared.generated.resources.label_current_semester
+import shiguangschedule.shared.generated.resources.label_all_semesters
 import shiguangschedule.shared.generated.resources.label_exam_type
 import shiguangschedule.shared.generated.resources.label_gpa
 import shiguangschedule.shared.generated.resources.label_grade_point
@@ -63,7 +68,6 @@ import shiguangschedule.shared.generated.resources.label_score
 import shiguangschedule.shared.generated.resources.label_score_composition
 import shiguangschedule.shared.generated.resources.label_teacher
 import shiguangschedule.shared.generated.resources.list_alt_24px
-import shiguangschedule.shared.generated.resources.message_grade_import_pending
 import shiguangschedule.shared.generated.resources.status_no_data
 import shiguangschedule.shared.generated.resources.title_grade_center
 import shiguangschedule.shared.generated.resources.title_grade_empty
@@ -74,7 +78,8 @@ data class GradeCenterUiState(
     val semesters: List<String> = emptyList(),
     val selectedSemester: String? = null,
     val summary: GradeSemesterSummary? = null,
-    val records: List<GradeRecord> = emptyList()
+    val records: List<GradeRecord> = emptyList(),
+    val semesterSummaries: Map<String, GradeSemesterSummary> = emptyMap()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,14 +87,39 @@ data class GradeCenterUiState(
 fun GradeCenterScreen(
     onNavigate: (Destination) -> Unit,
     onBack: () -> Unit,
-    uiState: GradeCenterUiState = GradeCenterUiState()
+    uiState: GradeCenterUiState? = null
 ) {
+    val importedState by GradeImportStore.state.collectAsState()
+    val gradeRepository: GradeRepository = koinInject()
+    val savedRecords by gradeRepository.observeAll().collectAsState(initial = emptyList())
+    val savedState = if (savedRecords.isEmpty()) null else GradeCenterUiState(
+        semesters = savedRecords.map { it.semester }.distinct(),
+        selectedSemester = savedRecords.firstOrNull()?.semester,
+        records = savedRecords,
+        semesterSummaries = savedRecords.map { it.semester }.distinct().associateWith { semester ->
+            summarizeRecords(savedRecords, semester)
+        }
+    )
+    // The database is the source of truth across process restarts; the store only
+    // provides an immediate in-process update while Room emits its new snapshot.
+    val effectiveUiState = savedState ?: importedState ?: uiState ?: GradeCenterUiState()
     var semesterMenuExpanded by remember { mutableStateOf(false) }
+    var selectedSemester by remember { mutableStateOf(effectiveUiState.selectedSemester) }
+    LaunchedEffect(effectiveUiState.semesters, effectiveUiState.selectedSemester) {
+        if (selectedSemester == null || selectedSemester !in effectiveUiState.semesters && selectedSemester != ALL_SEMESTERS) {
+            selectedSemester = effectiveUiState.selectedSemester
+        }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val importPendingMessage = stringResource(Res.string.message_grade_import_pending)
     val onImport: () -> Unit = {
-        scope.launch { snackbarHostState.showSnackbar(importPendingMessage) }
+        onNavigate(
+            Destination.WebView(
+                initialUrl = "https://jwxt.nuist.edu.cn/jwapp/sys/cjcx/*default/index.do?EMAP_LANG=zh",
+                assetJsPath = "NUIST/nuist_grade.js",
+                completionDestination = "grade",
+                repoRoot = "grades"
+            )
+        )
     }
 
     AdaptiveNavigationScaffold(
@@ -110,7 +140,7 @@ fun GradeCenterScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onImport, enabled = !uiState.isLoading) {
+                        IconButton(onClick = onImport, enabled = !effectiveUiState.isLoading) {
                             Icon(
                                 imageVector = vectorResource(Res.drawable.list_alt_24px),
                                 contentDescription = stringResource(Res.string.action_import_grade)
@@ -122,18 +152,19 @@ fun GradeCenterScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { contentPadding ->
             when {
-                uiState.isLoading -> LoadingContent(
+                effectiveUiState.isLoading -> LoadingContent(
                     Modifier.padding(navigationPadding).padding(contentPadding)
                 )
-                uiState.errorMessage != null -> ErrorContent(
-                    message = uiState.errorMessage,
+                effectiveUiState.errorMessage != null -> ErrorContent(
+                    message = effectiveUiState.errorMessage,
                     onRetry = onImport,
                     modifier = Modifier.padding(navigationPadding).padding(contentPadding)
                 )
                 else -> GradeContent(
-                    uiState = uiState,
+                    uiState = effectiveUiState.forSemester(selectedSemester),
                     semesterMenuExpanded = semesterMenuExpanded,
                     onSemesterMenuChange = { semesterMenuExpanded = it },
+                    onSemesterSelected = { selectedSemester = it },
                     onImport = onImport,
                     modifier = Modifier.padding(navigationPadding).padding(contentPadding)
                 )
@@ -147,6 +178,7 @@ private fun GradeContent(
     uiState: GradeCenterUiState,
     semesterMenuExpanded: Boolean,
     onSemesterMenuChange: (Boolean) -> Unit,
+    onSemesterSelected: (String) -> Unit,
     onImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -160,7 +192,8 @@ private fun GradeContent(
                 semesters = uiState.semesters,
                 selectedSemester = uiState.selectedSemester,
                 expanded = semesterMenuExpanded,
-                onExpandedChange = onSemesterMenuChange
+                onExpandedChange = onSemesterMenuChange,
+                onSemesterSelected = onSemesterSelected
             )
         }
         item { SummaryGrid(uiState.summary) }
@@ -177,7 +210,8 @@ private fun SemesterSelector(
     semesters: List<String>,
     selectedSemester: String?,
     expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit
+    onExpandedChange: (Boolean) -> Unit,
+    onSemesterSelected: (String) -> Unit
 ) {
     Box {
         Card(
@@ -193,7 +227,10 @@ private fun SemesterSelector(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        selectedSemester ?: stringResource(Res.string.status_no_data),
+                        when (selectedSemester) {
+                            ALL_SEMESTERS -> stringResource(Res.string.label_all_semesters)
+                            else -> selectedSemester ?: stringResource(Res.string.status_no_data)
+                        },
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -205,11 +242,70 @@ private fun SemesterSelector(
             }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.label_all_semesters)) },
+                onClick = {
+                    onSemesterSelected(ALL_SEMESTERS)
+                    onExpandedChange(false)
+                }
+            )
             semesters.forEach { semester ->
-                DropdownMenuItem(text = { Text(semester) }, onClick = { onExpandedChange(false) })
+                DropdownMenuItem(
+                    text = { Text(semester) },
+                    onClick = {
+                        onSemesterSelected(semester)
+                        onExpandedChange(false)
+                    }
+                )
             }
         }
     }
+}
+
+private fun GradeCenterUiState.forSemester(semester: String?): GradeCenterUiState {
+    if (semester.isNullOrBlank()) return this
+    if (semester == ALL_SEMESTERS) {
+        return copy(selectedSemester = semester, summary = summarizeAll(), records = records)
+    }
+    return copy(
+        selectedSemester = semester,
+        summary = semesterSummaries[semester] ?: summary,
+        records = records.filter { it.semester == semester }
+    )
+}
+
+private const val ALL_SEMESTERS = "__ALL_SEMESTERS__"
+
+private fun GradeCenterUiState.summarizeAll(): GradeSemesterSummary? {
+    if (records.isEmpty()) return null
+    val pairs = records.mapNotNull { record ->
+        val credits = record.credits.toDoubleOrNull()
+        val point = record.gradePoint.toDoubleOrNull()
+        if (credits != null && point != null) credits to point else null
+    }
+    val totalCredits = records.mapNotNull { it.credits.toDoubleOrNull() }.sum()
+    val gpa = pairs.takeIf { it.isNotEmpty() }?.let {
+        val credits = it.sumOf { pair -> pair.first }
+        if (credits > 0) it.sumOf { pair -> pair.first * pair.second } / credits else 0.0
+    }
+    return GradeSemesterSummary(
+        semester = ALL_SEMESTERS,
+        gpa = gpa?.let { "%.2f".format(it) } ?: "--",
+        totalCredits = if (totalCredits % 1.0 == 0.0) totalCredits.toInt().toString() else "%.2f".format(totalCredits),
+        courseCount = records.size
+    )
+}
+
+private fun summarizeRecords(records: List<GradeRecord>, semester: String): GradeSemesterSummary {
+    val selected = records.filter { it.semester == semester }
+    val credits = selected.mapNotNull { it.credits.toDoubleOrNull() }.sum()
+    val pairs = selected.mapNotNull { r ->
+        val c = r.credits.toDoubleOrNull(); val p = r.gradePoint.toDoubleOrNull()
+        if (c != null && p != null) c to p else null
+    }
+    val total = pairs.sumOf { it.first }
+    val gpa = if (total > 0) "%.2f".format(pairs.sumOf { it.first * it.second } / total) else "--"
+    return GradeSemesterSummary(semester, gpa, if (credits % 1.0 == 0.0) credits.toInt().toString() else "%.2f".format(credits), selected.size)
 }
 
 @Composable

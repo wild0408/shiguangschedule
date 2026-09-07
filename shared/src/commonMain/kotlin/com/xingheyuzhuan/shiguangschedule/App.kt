@@ -193,7 +193,14 @@ fun ScreenContent(
             onNavigate, onBack, targetDest.schoolId, targetDest.schoolName, targetDest.categoryNumber, targetDest.resourceFolder
         )
         is Destination.WebView -> WebViewScreen(
-            onNavigate, onBack, targetDest.initialUrl, targetDest.assetJsPath
+            onNavigate, onBack, targetDest.initialUrl, targetDest.assetJsPath,
+            onTaskCompleted = {
+                onNavigate(
+                    if (targetDest.completionDestination == "grade") Destination.GradeCenter
+                    else Destination.CourseSchedule
+                )
+            },
+            repoRoot = targetDest.repoRoot
         )
         is Destination.AddEditCourse -> AddEditCourseScreen(
             onBack, targetDest.courseId

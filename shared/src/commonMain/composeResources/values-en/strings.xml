@@ -38,6 +38,7 @@
     <string name="desc_grade_empty">Import grades from your academic system to see semester summaries and course details.</string>
     <string name="action_import_grade">Import grades</string>
     <string name="label_current_semester">Current semester</string>
+    <string name="label_all_semesters">All semesters</string>
     <string name="label_gpa">GPA</string>
     <string name="label_credits">Total credits</string>
     <string name="label_course_count">Courses</string>

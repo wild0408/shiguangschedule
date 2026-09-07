@@ -36,6 +36,9 @@ class DatabaseModule {
     fun provideCourseWeekDao(db: MainAppDatabase): CourseWeekDao = db.courseWeekDao()
 
     @Factory
+    fun provideGradeDao(db: MainAppDatabase): GradeDao = db.gradeDao()
+
+    @Factory
     fun provideWidgetCourseDao(db: WidgetDatabase): WidgetCourseDao = db.widgetCourseDao()
 
     @Factory

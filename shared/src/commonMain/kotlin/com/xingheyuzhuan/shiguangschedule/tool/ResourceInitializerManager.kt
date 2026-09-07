@@ -29,12 +29,33 @@ class ResourceInitializerManager(
     @Named("CacheDir") private val cacheDir: Path
 ) {
     private val targetRepoDir: Path = filesDir / "repo"
+    private val targetGradeRepoDir: Path = filesDir / "repo" / "grades"
     private val shareTempDir: Path = cacheDir / "share_temp"
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
             initializeOfflineRepo()
+            // 成绩脚本随 APK 发布，启动时覆盖同步，避免旧版本脚本残留导致流程不一致。
+            initializeOfflineGradeRepo(forceOverwrite = true)
             clearTempCaches()
+        }
+    }
+
+    @OptIn(ExperimentalResourceApi::class)
+    suspend fun initializeOfflineGradeRepo(forceOverwrite: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!forceOverwrite && fileSystem.exists(targetGradeRepoDir / "resources")) return@runCatching
+            val zipBytes = Res.readBytes("files/offline_grades.zip")
+            val tempZipFile = filesDir / "temp_offline_grades.zip"
+            fileSystem.write(tempZipFile) { write(zipBytes) }
+            try {
+                val zipFileSystem = fileSystem.openZip(tempZipFile)
+                if (fileSystem.exists(targetGradeRepoDir)) fileSystem.deleteRecursively(targetGradeRepoDir)
+                fileSystem.createDirectories(targetGradeRepoDir)
+                unzipDirectory(zipFileSystem, "/".toPath(), targetGradeRepoDir)
+            } finally {
+                fileSystem.delete(tempZipFile)
+            }
         }
     }
 

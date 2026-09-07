@@ -59,6 +59,11 @@ data class SaveCoursesPayload(
 )
 
 @Serializable
+data class SaveGradesPayload(
+    val gradesJsonString: String
+)
+
+@Serializable
 data class SaveConfigPayload(
     val configJsonString: String
 )
@@ -185,6 +190,13 @@ val JS_BRIDGE_INIT = """
                 var id = 'cb_' + (++callbackCounter) + '_' + Date.now();
                 callbacks[id] = { resolve: resolve, reject: reject };
                 postMessageToNative('saveImportedCourses', { coursesJsonString: coursesJsonString }, id);
+            });
+        },
+        saveImportedGrades: function(gradesJsonString) {
+            return new Promise(function(resolve, reject) {
+                var id = 'cb_' + (++callbackCounter) + '_' + Date.now();
+                callbacks[id] = { resolve: resolve, reject: reject };
+                postMessageToNative('saveImportedGrades', { gradesJsonString: gradesJsonString }, id);
             });
         },
         saveCourseConfig: function(configJsonString) {

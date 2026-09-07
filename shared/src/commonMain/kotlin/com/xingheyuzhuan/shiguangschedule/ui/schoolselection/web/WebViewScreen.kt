@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.repository.CourseConversionRepository
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeRepository
 import com.xingheyuzhuan.shiguangschedule.ui.components.CourseTablePickerDialog
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
 import kotlinx.coroutines.channels.Channel
@@ -95,6 +96,8 @@ fun WebViewScreen(
     onBack: () -> Unit,
     initialUrl: String?,
     assetJsPath: String?,
+    onTaskCompleted: () -> Unit = { onNavigate(Destination.CourseSchedule) },
+    repoRoot: String = "schools",
     viewModel: WebViewModel = koinViewModel()
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -131,19 +134,32 @@ fun WebViewScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val courseConversionRepository: CourseConversionRepository = koinInject()
+    val gradeRepository: GradeRepository = koinInject()
     val uiEventChannel = remember { Channel<WebUiEvent>(Channel.UNLIMITED) }
     val uiEventsFlow = remember(uiEventChannel) { uiEventChannel.receiveAsFlow() }
 
-    val bridgeHandler = remember(coroutineScope, courseConversionRepository, webViewController) {
+    val bridgeHandler = remember(coroutineScope, courseConversionRepository, gradeRepository, webViewController) {
         WebBridgeHandler(
             coroutineScope = coroutineScope,
             uiEventChannel = uiEventChannel,
             courseConversionRepository = courseConversionRepository,
-            onTaskCompleted = { onNavigate(Destination.CourseSchedule) },
+            gradeRepository = gradeRepository,
+            onTaskCompleted = onTaskCompleted,
             evaluateJs = { script, callback ->
                 webViewController.evaluateJavascript(script, callback)
             }
         )
+    }
+
+    val executeGradeScript: () -> Unit = {
+        try {
+            val jsPath = viewModel.filesDir / "repo" / repoRoot / "resources" / (assetJsPath ?: "")
+            if (!viewModel.fileSystem.exists(jsPath)) error("成绩适配脚本不存在：$jsPath")
+            webViewController.executeScript(viewModel.fileSystem.read(jsPath) { readUtf8() })
+            ToastManager.show(toastExecutingImport)
+        } catch (error: Exception) {
+            ToastManager.show(toastLoadImportFailedFmt.replace("%s", error.message ?: ""))
+        }
     }
 
     val handleBackAction: () -> Unit = {
@@ -328,7 +344,8 @@ fun WebViewScreen(
                         Button(
                             onClick = {
                                 if (assetJsPath != null) {
-                                    showCourseTablePicker = true
+                                    if (repoRoot == "grades") executeGradeScript()
+                                    else showCourseTablePicker = true
                                 } else {
                                     ToastManager.show(toastNoManualImport)
                                 }
@@ -368,7 +385,7 @@ fun WebViewScreen(
                 )
             }
 
-            if (showCourseTablePicker && assetJsPath != null) {
+            if (repoRoot == "schools" && showCourseTablePicker && assetJsPath != null) {
                 CourseTablePickerDialog(
                     title = stringResource(Res.string.dialog_title_select_table_for_import),
                     onDismissRequest = { showCourseTablePicker = false },
@@ -378,11 +395,11 @@ fun WebViewScreen(
 
                         try {
                             val fileSystem = viewModel.fileSystem
-                            val jsFilePath = viewModel.filesDir / "repo" / "schools" / "resources" / assetJsPath
+                            val jsFilePath = viewModel.filesDir / "repo" / repoRoot / "resources" / assetJsPath
 
                             if (fileSystem.exists(jsFilePath)) {
                                 val jsCode = fileSystem.read(jsFilePath) { readUtf8() }
-                                bridgeHandler.setImportTableId(tableId)
+                                if (repoRoot == "schools") bridgeHandler.setImportTableId(tableId)
 
                                 val fullJsScript = "window.currentTableId = '$tableId';\n$jsCode"
                                 webViewController.executeScript(fullJsScript)
