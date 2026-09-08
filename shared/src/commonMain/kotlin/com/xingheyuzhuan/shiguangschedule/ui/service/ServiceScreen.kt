@@ -29,6 +29,9 @@ import shiguangschedule.shared.generated.resources.desc_grade_center
 import shiguangschedule.shared.generated.resources.item_grade_center
 import shiguangschedule.shared.generated.resources.list_alt_24px
 import shiguangschedule.shared.generated.resources.nav_service
+import shiguangschedule.shared.generated.resources.item_electricity
+import shiguangschedule.shared.generated.resources.desc_electricity
+import shiguangschedule.shared.generated.resources.electricity_24px
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +72,11 @@ fun ServiceScreen(
                             title = stringResource(Res.string.item_grade_center),
                             description = stringResource(Res.string.desc_grade_center)
                         )
+                    }
+                }
+                item {
+                    Card(onClick = { onNavigate(Destination.ElectricityCenter) }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        RowContent(Res.drawable.electricity_24px, stringResource(Res.string.item_electricity), stringResource(Res.string.desc_electricity))
                     }
                 }
             }

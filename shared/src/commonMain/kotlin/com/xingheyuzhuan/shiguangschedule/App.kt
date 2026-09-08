@@ -52,6 +52,7 @@ import com.xingheyuzhuan.shiguangschedule.ui.theme.ShiguangScheduleTheme
 import com.xingheyuzhuan.shiguangschedule.ui.today.TodayScheduleScreen
 import com.xingheyuzhuan.shiguangschedule.ui.service.ServiceScreen
 import com.xingheyuzhuan.shiguangschedule.ui.service.GradeCenterScreen
+import com.xingheyuzhuan.shiguangschedule.ui.service.ElectricityCenterScreen
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -188,6 +189,7 @@ fun ScreenContent(
         Destination.BackupAndRestore -> BackupScreen(onBack)
         Destination.LanguageSettings -> LanguageSettingScreen(onBack)
         Destination.GradeCenter -> GradeCenterScreen(onNavigate, onBack)
+        Destination.ElectricityCenter -> ElectricityCenterScreen(onBack)
 
         is Destination.AdapterSelection -> AdapterSelectionScreen(
             onNavigate, onBack, targetDest.schoolId, targetDest.schoolName, targetDest.categoryNumber, targetDest.resourceFolder

@@ -41,6 +41,7 @@ koin-plugin = "1.1.0"
 coil = "3.5.0"
 aboutLibraries = "15.0.4"
 kgit = "1.0.2"
+miuix = "0.9.4-rc01"
 
 # 测试框架
 junit = "4.13.2"
@@ -113,6 +114,8 @@ kgit = { module = "io.github.xingheyuzhuan:kgit", version.ref = "kgit" }
 aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDateTime" }
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 
 # Koin 依赖注入
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }

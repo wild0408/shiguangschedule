@@ -591,4 +591,19 @@
     <string name="backup_target_webdav">WebDAV 云同步</string>
     <string name="backup_target_local_zip">本地 ZIP 文件</string>
 
+    <string name="item_electricity">电费查询</string>
+    <string name="desc_electricity">查询宿舍剩余电量</string>
+    <string name="title_electricity">电费查询</string>
+    <string name="label_student_id">学号</string>
+    <string name="label_password">密码</string>
+    <string name="label_campus">校区</string>
+    <string name="label_building">楼栋</string>
+    <string name="label_room">房号</string>
+    <string name="action_save_query">保存并查询</string>
+    <string name="action_dismiss">关闭</string>
+    <string name="label_remaining_power">剩余电量</string>
+    <string name="label_updated">数据来自一卡通接口</string>
+    <string name="action_edit_room">修改宿舍</string>
+    <string name="action_clear_account">清除账号</string>
+    <string name="title_recent_history">最近查询</string>
 </resources>

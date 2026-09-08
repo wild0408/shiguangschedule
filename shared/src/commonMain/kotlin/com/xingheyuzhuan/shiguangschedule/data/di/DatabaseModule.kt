@@ -39,6 +39,9 @@ class DatabaseModule {
     fun provideGradeDao(db: MainAppDatabase): GradeDao = db.gradeDao()
 
     @Factory
+    fun provideElectricityHistoryDao(db: MainAppDatabase): ElectricityHistoryDao = db.electricityHistoryDao()
+
+    @Factory
     fun provideWidgetCourseDao(db: WidgetDatabase): WidgetCourseDao = db.widgetCourseDao()
 
     @Factory

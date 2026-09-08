@@ -16,6 +16,10 @@ import org.koin.core.annotation.Single
 class SharedModule {
 
     @Single
+    fun provideElectricityApi(): com.xingheyuzhuan.shiguangschedule.data.api.electricity.ElectricityApi =
+        com.xingheyuzhuan.shiguangschedule.data.api.electricity.createElectricityApi()
+
+    @Single
     fun provideFileSystem(): FileSystem = FileSystem.SYSTEM
 
     @Single
