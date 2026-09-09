@@ -164,7 +164,8 @@ fun DayHeader(
     lineColor: Color,
     textColor: Color,
     subTextColor: Color,
-    strokeWidthPx: Float
+    strokeWidthPx: Float,
+    useMiuix: Boolean = false
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth().height(style.dayHeaderHeight)) {
         val shouldShowDate = !style.hideDateUnderDay && maxHeight >= 42.dp
@@ -229,7 +230,10 @@ fun DayHeader(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(if (index == todayIndex) MaterialTheme.colorScheme.primaryContainer.copy(0.4f) else Color.Transparent),
+                            .background(
+                                if (index == todayIndex && !useMiuix) MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
+                                else Color.Transparent
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -243,7 +247,7 @@ fun DayHeader(
                                 text = day,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = textColor,
+                                    color = if (index == todayIndex && useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else textColor,
                                 maxLines = 1,
                                 style = TextStyle(
                                     lineHeight = 16.sp
@@ -255,7 +259,7 @@ fun DayHeader(
                                 Text(
                                     text = dates[index],
                                     fontSize = 10.sp,
-                                    color = subTextColor,
+                                    color = if (index == todayIndex && useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else subTextColor,
                                     maxLines = 1,
                                     style = TextStyle(
                                         lineHeight = 12.sp
@@ -287,7 +291,8 @@ fun TimeColumn(
     subTextColor: Color,
     strokeWidthPx: Float,
     activeDragHour: Int? = null,
-    activeDragMinuteStr: String? = null
+    activeDragMinuteStr: String? = null,
+    useMiuix: Boolean = false
 ) {
     val currentHour = remember {
         try {
@@ -310,7 +315,10 @@ fun TimeColumn(
                     .fillMaxWidth()
                     .height(style.sectionHeight)
                     .clickable { onTimeSlotClicked() }
-                    .background(if (isCurrentHourActive) MaterialTheme.colorScheme.primaryContainer.copy(0.4f) else Color.Transparent)
+                    .background(
+                        if (isCurrentHourActive && !useMiuix) MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
+                        else Color.Transparent
+                    )
                     .drawBehind {
                         if (!style.hideGridLines) {
                             drawLine(lineColor, Offset(size.width, 0f), Offset(size.width, size.height), strokeWidthPx)
@@ -349,7 +357,9 @@ fun TimeColumn(
                             text = formatHourStr,
                             fontSize = if (h < 32.dp) 11.sp else 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isCurrentHourActive) MaterialTheme.colorScheme.primary else textColor
+                            color = if (isCurrentHourActive) {
+                                if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+                            } else textColor
                         )
                     } else {
                         val slot = timeSlots.getOrNull(index)

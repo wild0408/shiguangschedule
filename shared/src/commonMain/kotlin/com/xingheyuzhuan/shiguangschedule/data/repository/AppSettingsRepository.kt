@@ -92,7 +92,8 @@ class AppSettingsRepository(
             prefs[AppSettingsModel.KEY_COMPAT_WEARABLE_SYNC] = newSettings.compatWearableSync
             prefs[AppSettingsModel.KEY_SHOW_NON_CURRENT_WEEK_COURSES] = newSettings.showNonCurrentWeekCourses
             prefs[AppSettingsModel.KEY_START_SCREEN] = newSettings.startScreen.value
-            prefs[AppSettingsModel.KEY_THEME_MODE] = newSettings.themeMode.value
+              prefs[AppSettingsModel.KEY_THEME_MODE] = newSettings.themeMode.value
+              prefs[AppSettingsModel.KEY_UI_STYLE] = newSettings.uiStyle.value
             prefs[AppSettingsModel.KEY_USE_DYNAMIC_COLOR] = newSettings.useDynamicColor
             prefs[AppSettingsModel.KEY_CUSTOM_LIGHT_PRIMARY] = newSettings.customLightPrimary
             prefs[AppSettingsModel.KEY_CUSTOM_DARK_PRIMARY] = newSettings.customDarkPrimary

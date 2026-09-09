@@ -375,6 +375,8 @@
     <string name="action_select_table">選擇課表</string>
     <string name="label_tweak_from_date">被調整日期</string>
     <string name="label_tweak_to_date">調整到日期</string>
+    <string name="dialog_title_select_tweak_from_date">選擇被調整日期</string>
+    <string name="dialog_title_select_tweak_to_date">選擇調整到日期</string>
     <string name="text_tweak_hint">請確認以下兩個日期的課程資訊，點選右上角儲存即可完成調課。</string>
     <string name="title_tweak_from_course">被調整的課程</string>
     <string name="a11y_arrow">箭頭</string>

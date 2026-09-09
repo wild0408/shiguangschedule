@@ -23,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.desc_compat_wearable_sync
@@ -63,14 +66,51 @@ fun GeneralSettingsCard(
 
     // 仅在开启提醒开关但无权限时弹窗引导
     var showExactAlarmDialog by remember { mutableStateOf(false) }
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val reminderToggle: (Boolean) -> Unit = { targetState ->
+        if (targetState) {
+            if (hasExactAlarmPermission(context)) onReminderToggle(true) else showExactAlarmDialog = true
+        } else onReminderToggle(false)
+    }
 
     Column(modifier = modifier) {
-        Text(
-            text = stringResource(Res.string.section_title_general),
-            style = MaterialTheme.typography.titleLarge
-        )
+        if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.section_title_general))
+        else Text(text = stringResource(Res.string.section_title_general), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
-        Card(
+        if (useMiuix) {
+            top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)
+            ) {
+                Column {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_permission_importance_title), style = MiuixTheme.textStyles.title3)
+                        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_permission_importance_detail), style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, modifier = Modifier.padding(top = 6.dp))
+                    }
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = stringResource(Res.string.item_course_reminder),
+                        endActions = { top.yukonga.miuix.kmp.basic.Switch(checked = uiState.reminderEnabled, onCheckedChange = reminderToggle) }
+                    )
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = stringResource(Res.string.item_compat_wearable_sync),
+                        summary = stringResource(Res.string.desc_compat_wearable_sync),
+                        endActions = { top.yukonga.miuix.kmp.basic.Switch(checked = uiState.compatWearableSync, onCheckedChange = onCompatWearableToggle) }
+                    )
+                    SettingItemRow(
+                        title = stringResource(Res.string.item_auto_mode),
+                        currentValue = currentModeText ?: if (!uiState.reminderEnabled) stringResource(Res.string.text_auto_mode_dependency) else null,
+                        onClick = onAutoModeClick
+                    )
+                    SettingItemRow(title = stringResource(Res.string.item_remind_time_before), currentValue = stringResource(Res.string.remind_time_minutes_format, uiState.remindBeforeMinutes), onClick = onRemindTimeClick)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        SettingItemRow(title = stringResource(Res.string.item_exact_alarm_permission), currentValue = stringResource(if (uiState.exactAlarmStatus) Res.string.status_enabled else Res.string.status_disabled), onClick = { openExactAlarmSettings(context) })
+                    }
+                    SettingItemRow(title = stringResource(Res.string.item_dnd_permission), currentValue = stringResource(if (uiState.dndPermissionStatus) Res.string.status_authorized else Res.string.status_unauthorized), onClick = { openDndSettings(context) })
+                    SettingItemRow(title = stringResource(Res.string.item_background_and_autostart), onClick = onAppSettingsClick)
+                    SettingItemRow(title = stringResource(Res.string.item_ignore_battery_optimization), onClick = onBatteryOptimizationClick)
+                }
+            }
+        } else Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -101,20 +141,7 @@ fun GeneralSettingsCard(
                         text = stringResource(Res.string.item_course_reminder),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Switch(
-                        checked = uiState.reminderEnabled,
-                        onCheckedChange = { targetState ->
-                            if (targetState) {
-                                if (hasExactAlarmPermission(context)) {
-                                    onReminderToggle(true)
-                                } else {
-                                    showExactAlarmDialog = true
-                                }
-                            } else {
-                                onReminderToggle(false)
-                            }
-                        }
-                    )
+                    Switch(checked = uiState.reminderEnabled, onCheckedChange = reminderToggle)
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

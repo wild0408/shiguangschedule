@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
@@ -35,6 +38,17 @@ fun SettingItemRow(
     onClick: () -> Unit,
     trailing: @Composable () -> Unit = {}
 ) {
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    if (useMiuix) {
+        top.yukonga.miuix.kmp.basic.BasicComponent(
+            modifier = modifier,
+            title = title,
+            summary = currentValue,
+            onClick = onClick,
+            endActions = { trailing() }
+        )
+        return
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()

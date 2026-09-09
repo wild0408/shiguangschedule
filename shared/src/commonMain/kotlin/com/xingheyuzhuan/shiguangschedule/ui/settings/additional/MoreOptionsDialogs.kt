@@ -28,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import com.xingheyuzhuan.shiguangschedule.data.model.StartScreen
 import com.xingheyuzhuan.shiguangschedule.tool.UpdatePlatform
 import com.xingheyuzhuan.shiguangschedule.tool.UpdateStatus
@@ -57,6 +60,21 @@ fun StartScreenSelectionDialog(
     onConfirm: (StartScreen) -> Unit
 ) {
     if (!showDialog) return
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.dialog_select_start_screen), onDismissRequest = onDismiss, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+                StartScreen.entries.forEach { screen ->
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = stringResource(screen.labelRes),
+                        onClick = { onConfirm(screen) },
+                        startAction = { top.yukonga.miuix.kmp.basic.RadioButton(selected = screen == currentSelected, onClick = { onConfirm(screen) }) }
+                    )
+                }
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.fillMaxWidth())
+            }
+        }
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -101,6 +119,24 @@ fun ChannelSelectionDialog(
     if (!showDialog) return
 
     var selectedPlatform by remember(currentSelected) { mutableStateOf(currentSelected) }
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.dialog_select_update_channel), onDismissRequest = onDismiss, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+                UpdatePlatform.entries.forEach { platform ->
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = platform.title,
+                        onClick = { selectedPlatform = platform },
+                        startAction = { top.yukonga.miuix.kmp.basic.RadioButton(selected = platform == selectedPlatform, onClick = { selectedPlatform = platform }) }
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), { onConfirm(selectedPlatform) }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -148,6 +184,32 @@ fun UpdateResultDialog(
     onDownloadClick: (String) -> Unit
 ) {
     if (!showDialog || updateStatus is UpdateStatus.Idle || updateStatus is UpdateStatus.NotSupported) return
+
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        val title = when (updateStatus) {
+            is UpdateStatus.Checking -> stringResource(Res.string.dialog_checking_update)
+            is UpdateStatus.Found -> stringResource(Res.string.dialog_new_version_found, updateStatus.versionName)
+            is UpdateStatus.Latest -> stringResource(Res.string.dialog_current_version_latest)
+            is UpdateStatus.Error -> stringResource(Res.string.dialog_update_check_failed)
+        }
+        val summary = when (updateStatus) {
+            is UpdateStatus.Checking -> stringResource(Res.string.tip_please_wait)
+            is UpdateStatus.Found -> updateStatus.changelog
+            is UpdateStatus.Latest -> stringResource(Res.string.label_version_prefix, updateStatus.currentVersion)
+            is UpdateStatus.Error -> stringResource(Res.string.label_error_message, updateStatus.message)
+        }
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = title, onDismissRequest = if (updateStatus is UpdateStatus.Checking) ({}) else onDismiss, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                if (updateStatus is UpdateStatus.Checking) top.yukonga.miuix.kmp.basic.CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+                top.yukonga.miuix.kmp.basic.Text(summary, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary, modifier = Modifier.fillMaxWidth().heightIn(max = 350.dp).verticalScroll(rememberScrollState()))
+                if (updateStatus !is UpdateStatus.Checking) Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(if (updateStatus is UpdateStatus.Found) Res.string.action_cancel else Res.string.action_confirm), onDismiss, Modifier.weight(1f))
+                    if (updateStatus is UpdateStatus.Found) top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.btn_download_update), { onDownloadClick(updateStatus.targetUrl) }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     if (updateStatus is UpdateStatus.Checking) {
         AlertDialog(

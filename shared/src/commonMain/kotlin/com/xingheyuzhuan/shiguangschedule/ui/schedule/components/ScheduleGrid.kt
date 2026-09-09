@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
@@ -26,8 +27,12 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import com.xingheyuzhuan.shiguangschedule.data.model.schedule_style.ScheduleModeProto
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringArrayResource
 import shiguangschedule.shared.generated.resources.Res
@@ -42,9 +47,14 @@ fun ScheduleGrid(
     viewState: ScheduleGridViewState,
     actions: ScheduleGridActions,
     style: ScheduleGridStyleComposed,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomContentPadding: Dp = 0.dp
 ) {
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onSizeChanged { state.viewportHeightPx = it.height.toFloat() }
+    ) {
         val density = LocalDensity.current
 
         LaunchedEffect(viewState.mergedCourses) {
@@ -52,7 +62,8 @@ fun ScheduleGrid(
             actions.onHoldStateChanged(false)
         }
 
-        val pageTextColor = style.pageTextColor ?: MaterialTheme.colorScheme.onSurface
+        val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+        val pageTextColor = style.pageTextColor ?: if (useMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface
         val pageSubTextColor = pageTextColor.copy(alpha = 0.7f)
         val weekDays = stringArrayResource(Res.array.week_days_short_names).toList()
         val reorderedWeekDays = rearrangeDays(weekDays, viewState.firstDayOfWeek)
@@ -63,7 +74,8 @@ fun ScheduleGrid(
         val maxGridSections = if (is24HourMode) 24 else viewState.timeSlots.size
 
         val totalGridHeight = style.sectionHeight * maxGridSections
-        val gridLineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        val gridLineColor = if (useMiuix) MiuixTheme.colorScheme.outline.copy(alpha = 0.16f)
+        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
         val strokeWidthPx = 1f
 
         val singleSchedulables = remember(viewState.mergedCourses, viewState.firstDayOfWeek, viewState.showWeekends) {
@@ -168,14 +180,20 @@ fun ScheduleGrid(
             }
         }
 
-        Column(Modifier.fillMaxSize()) {
-            DayHeader(style, displayDays, viewState.dates, viewState.currentYear, viewState.currentWeek, viewState.todayIndex, gridLineColor, pageTextColor, pageSubTextColor, strokeWidthPx)
+        // Keep the reference app's simple shape: one full-size vertical scroll
+        // surface owns the header, grid, and a tail below the final period.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(state = state.gridScrollState, enabled = state.expandedItem == null)
+                .padding(bottom = bottomContentPadding)
+        ) {
+            DayHeader(style, displayDays, viewState.dates, viewState.currentYear, viewState.currentWeek, viewState.todayIndex, gridLineColor, pageTextColor, pageSubTextColor, strokeWidthPx, useMiuix)
 
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .onSizeChanged { state.viewportHeightPx = it.height.toFloat() }
-                    .verticalScroll(state = state.gridScrollState, enabled = state.expandedItem == null)
+                    .fillMaxWidth()
+                    .height(totalGridHeight)
             ) {
                 TimeColumn(
                     style = style, timeSlots = viewState.timeSlots, maxGridSections = maxGridSections,
@@ -184,7 +202,8 @@ fun ScheduleGrid(
                     currentSectionIndex = viewState.currentSectionIndex, textColor = pageTextColor,
                     subTextColor = pageSubTextColor, strokeWidthPx = strokeWidthPx,
                     activeDragHour = activeDragHour,
-                    activeDragMinuteStr = activeDragMinuteStr
+                    activeDragMinuteStr = activeDragMinuteStr,
+                    useMiuix = useMiuix
                 )
 
                 Layout(
@@ -367,21 +386,9 @@ fun ScheduleGrid(
                                 val x = i * cellWidth
                                 drawLine(gridLineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = strokeWidthPx)
                             }
-                            for (i in 1..maxGridSections) {
+                        for (i in 1..maxGridSections) {
                                 val y = i * sectionHeightPx
                                 drawLine(gridLineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = strokeWidthPx)
-                            }
-                        }
-                        .pointerInput(displayDaysCount, sectionHeightPx, viewState.firstDayOfWeek, maxGridSections, is24HourMode, state.expandedItem) {
-                            detectTapGestures { offset ->
-                                if (state.expandedItem != null) {
-                                    state.expandedItem = null
-                                    actions.onHoldStateChanged(false)
-                                    return@detectTapGestures
-                                }
-                                val dayIdx = (offset.x / (size.width / displayDaysCount)).toInt().coerceIn(0, displayDaysCount - 1)
-                                val secIdx = (offset.y / sectionHeightPx).toInt().coerceIn(0, maxGridSections - 1)
-                                actions.onGridCellClicked(mapDisplayIndexToDay(dayIdx, viewState.firstDayOfWeek), if (is24HourMode) secIdx else (secIdx + 1))
                             }
                         }
                 ) { measurables, constraints ->
@@ -447,6 +454,7 @@ fun ScheduleGrid(
                     }
                 }
             }
+
         }
     }
 }

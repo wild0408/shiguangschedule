@@ -6,7 +6,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import com.xingheyuzhuan.shiguangschedule.ui.components.CourseTablePickerDialog
 import com.xingheyuzhuan.shiguangschedule.ui.components.NativeNumberPicker
@@ -78,9 +82,19 @@ fun IcsExportDialog(
 ) {
     var alarmMinutes by remember { mutableStateOf<Int?>(15) }
     var showTablePicker by remember { mutableStateOf(false) }
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     if (!showTablePicker) {
-        AlertDialog(
+        if (useMiuix) top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.dialog_title_ics_export_settings), onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_select_alarm_time), style = MiuixTheme.textStyles.body1)
+                AlarmMinutesPicker(Modifier.width(150.dp), onValueSelected = { alarmMinutes = it }, itemHeight = 48.dp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_next_step), { showTablePicker = true }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        } else AlertDialog(
             onDismissRequest = onDismissRequest,
             title = { Text(stringResource(Res.string.dialog_title_ics_export_settings)) },
             text = {

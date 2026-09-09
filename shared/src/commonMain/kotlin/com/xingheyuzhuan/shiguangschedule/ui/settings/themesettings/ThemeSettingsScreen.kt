@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -49,10 +51,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.data.model.AppThemeMode
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdvancedColorPicker
 import com.xingheyuzhuan.shiguangschedule.ui.components.ColorPickerConfig
 import com.xingheyuzhuan.shiguangschedule.ui.settings.SettingsViewModel
 import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalIsDarkTheme
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.theme.supportsDynamicColor
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -70,6 +74,10 @@ import shiguangschedule.shared.generated.resources.refresh_24px
 import shiguangschedule.shared.generated.resources.theme_color_hint
 import shiguangschedule.shared.generated.resources.theme_mode_label
 import shiguangschedule.shared.generated.resources.theme_settings_title
+import shiguangschedule.shared.generated.resources.ui_style_label
+import shiguangschedule.shared.generated.resources.ui_style_material
+import shiguangschedule.shared.generated.resources.ui_style_miuix
+import shiguangschedule.shared.generated.resources.check_24px
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,13 +87,28 @@ fun ThemeSettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings = uiState.appSettings
-
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val surfaceColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface
+    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
 
     Scaffold(
+        modifier = if (useMiuix) Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection) else Modifier,
         containerColor = surfaceColor,
         topBar = {
-            Surface(
+            if (useMiuix) {
+                top.yukonga.miuix.kmp.basic.TopAppBar(
+                    title = stringResource(Res.string.theme_settings_title),
+                    largeTitle = stringResource(Res.string.theme_settings_title),
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                    scrollBehavior = miuixScrollBehavior,
+                    navigationIcon = {
+                        top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
+                        }
+                    },
+                    defaultWindowInsetsPadding = true,
+                )
+            } else Surface(
                 color = surfaceColor,
                 tonalElevation = 0.dp
             ) {
@@ -119,14 +142,18 @@ fun ThemeSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // 主题模式选择
-            SectionHeader(stringResource(Res.string.theme_mode_label))
+            if (!useMiuix) SectionHeader(stringResource(Res.string.theme_mode_label))
             ThemeModeSelector(
                 selectedMode = settings.themeMode,
                 onModeSelected = { viewModel.onThemeModeChanged(it) }
             )
 
+            if (!useMiuix) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            if (!useMiuix) SectionHeader(stringResource(Res.string.ui_style_label))
+            UiStyleSelector(settings.uiStyle) { viewModel.onUiStyleChanged(it) }
+
             // 动态取色 (利用跨平台 supportsDynamicColor 统一处理)
-            if (supportsDynamicColor) {
+            if (supportsDynamicColor && !useMiuix) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 DynamicColorToggle(
                     enabled = settings.useDynamicColor,
@@ -135,7 +162,7 @@ fun ThemeSettingsScreen(
             }
 
             // 自定义主色调选择
-            val showColorPicker = !supportsDynamicColor || !settings.useDynamicColor
+            val showColorPicker = !useMiuix && (!supportsDynamicColor || !settings.useDynamicColor)
 
             AnimatedVisibility(
                 visible = showColorPicker,
@@ -251,6 +278,18 @@ private fun ThemeModeSelector(
 ) {
     val modes = AppThemeMode.entries
 
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        val labels = modes.map { stringResource(it.labelRes) }
+        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+            items = labels,
+            selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0),
+            title = stringResource(Res.string.theme_mode_label),
+            modifier = Modifier.fillMaxWidth(),
+            onSelectedIndexChange = { index -> modes.getOrNull(index)?.let(onModeSelected) }
+        )
+        return
+    }
+
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         modes.forEachIndexed { index, mode ->
             SegmentedButton(
@@ -272,6 +311,16 @@ private fun DynamicColorToggle(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.BasicComponent(
+            modifier = Modifier.fillMaxWidth(),
+            title = stringResource(Res.string.dynamic_color_title),
+            summary = stringResource(Res.string.dynamic_color_desc),
+            onClick = { onEnabledChange(!enabled) },
+            endActions = { top.yukonga.miuix.kmp.basic.Switch(checked = enabled, onCheckedChange = onEnabledChange) }
+        )
+        return
+    }
     Surface(
         onClick = { onEnabledChange(!enabled) },
         shape = MaterialTheme.shapes.medium,
@@ -292,6 +341,10 @@ private fun DynamicColorToggle(
 
 @Composable
 private fun SectionHeader(text: String) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.SmallTitle(text)
+        return
+    }
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
@@ -299,4 +352,29 @@ private fun SectionHeader(text: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
     )
+}
+
+@Composable
+private fun UiStyleSelector(selected: AppUiStyle, onSelected: (AppUiStyle) -> Unit) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        val styles = AppUiStyle.entries
+        val labels = styles.map { style -> stringResource(if (style == AppUiStyle.MIUIX) Res.string.ui_style_miuix else Res.string.ui_style_material) }
+        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+            items = labels,
+            selectedIndex = styles.indexOf(selected).coerceAtLeast(0),
+            title = stringResource(Res.string.ui_style_label),
+            modifier = Modifier.fillMaxWidth(),
+            onSelectedIndexChange = { index -> styles.getOrNull(index)?.let(onSelected) }
+        )
+        return
+    }
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        AppUiStyle.entries.forEachIndexed { index, style ->
+            SegmentedButton(
+                selected = selected == style,
+                onClick = { onSelected(style) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = AppUiStyle.entries.size)
+            ) { Text(stringResource(if (style == AppUiStyle.MIUIX) Res.string.ui_style_miuix else Res.string.ui_style_material)) }
+        }
+    }
 }

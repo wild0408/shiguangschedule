@@ -2,8 +2,11 @@ package com.xingheyuzhuan.shiguangschedule.ui.settings.notification
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -30,8 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
 import com.xingheyuzhuan.shiguangschedule.data.model.AutoControlMode
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -67,6 +74,7 @@ fun NotificationDialogDispatcher(
     uiState: NotificationSettingsUiState,
     viewModel: NotificationSettingsViewModel
 ) {
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
     val coroutineScope = rememberCoroutineScope()
     var showDndGuideDialog by remember { mutableStateOf(false) }
 
@@ -110,7 +118,20 @@ fun NotificationDialogDispatcher(
         is NotificationDialogType.ClearConfirmation -> {
             val successMsg = stringResource(Res.string.toast_clear_success)
 
-            AlertDialog(
+            if (useMiuix) top.yukonga.miuix.kmp.window.WindowDialog(
+                show = true,
+                onDismissRequest = { viewModel.dismissDialog() },
+                title = stringResource(Res.string.dialog_title_clear_confirmation),
+                insideMargin = DpSize(16.dp, 16.dp)
+            ) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.dialog_text_clear_confirmation), style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                    MiuixDialogActions(onDismiss = { viewModel.dismissDialog() }, onConfirm = {
+                        viewModel.clearSkippedDates { result -> result.fold(onSuccess = { ToastManager.show(successMsg) }, onFailure = { e -> coroutineScope.launch { ToastManager.show(getString(Res.string.toast_clear_failed, e.message ?: "")) } }) }
+                        viewModel.dismissDialog()
+                    })
+                }
+            } else AlertDialog(
                 onDismissRequest = { viewModel.dismissDialog() },
                 title = { Text(stringResource(Res.string.dialog_title_clear_confirmation)) },
                 text = { Text(stringResource(Res.string.dialog_text_clear_confirmation)) },
@@ -201,6 +222,33 @@ fun AutoModeSelectionDialog(
         AutoControlMode.SILENT to stringResource(Res.string.auto_mode_silent)
     )
 
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(
+            show = true,
+            onDismissRequest = onDismiss,
+            title = stringResource(Res.string.dialog_title_auto_mode_selection),
+            insideMargin = DpSize(16.dp, 16.dp)
+        ) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!hasDndPermission) top.yukonga.miuix.kmp.basic.Text(
+                    stringResource(Res.string.auto_mode_dnd_permission_warning),
+                    color = MiuixTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.footnote1
+                )
+                modeOptions.forEach { (optionKey, label) ->
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = label,
+                        onClick = { selectedKey = optionKey },
+                        endActions = { top.yukonga.miuix.kmp.basic.RadioButton(selected = selectedKey == optionKey, onClick = { selectedKey = optionKey }) }
+                    )
+                }
+                MiuixDialogActions(onDismiss = onDismiss, onConfirm = {
+                    if (selectedKey != "OFF" && !hasDndPermission) { onDismiss(); onRequireDndPermission() } else onModeSelected(selectedKey)
+                })
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.dialog_title_auto_mode_selection)) },
@@ -255,6 +303,15 @@ fun EditRemindMinutesDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(Res.string.dialog_title_set_remind_time), insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.TextField(value = currentMinutes, onValueChange = onMinutesChange, modifier = Modifier.fillMaxWidth(), label = stringResource(Res.string.label_minutes_input), singleLine = true)
+                MiuixDialogActions(onDismiss, onConfirm)
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.dialog_title_set_remind_time)) },
@@ -279,6 +336,25 @@ fun EditRemindMinutesDialog(
 
 @Composable
 fun ViewSkippedDatesDialog(dates: Set<String>, onDismiss: () -> Unit) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = stringResource(Res.string.dialog_title_view_skipped_dates), insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (dates.isEmpty()) {
+                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.skipped_dates_none), style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                } else {
+                    LazyVerticalGrid(columns = GridCells.Adaptive(100.dp), modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(dates.toList().sorted()) { date ->
+                            top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.padding(4.dp), colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)) {
+                                top.yukonga.miuix.kmp.basic.Text(date, modifier = Modifier.padding(10.dp), style = MiuixTheme.textStyles.footnote1)
+                            }
+                        }
+                    }
+                }
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_close), onDismiss, Modifier.fillMaxWidth(), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.dialog_title_view_skipped_dates)) },
@@ -323,6 +399,18 @@ fun PermissionGuideDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = title, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(text, style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_go_to_settings), { onConfirm(); onDismiss() }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -337,4 +425,12 @@ fun PermissionGuideDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         }
     )
+}
+
+@Composable
+private fun MiuixDialogActions(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+        top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), onConfirm, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+    }
 }

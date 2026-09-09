@@ -2,7 +2,9 @@ package com.xingheyuzhuan.shiguangschedule.ui.settings.additional
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -32,6 +38,7 @@ import shiguangschedule.shared.generated.resources.item_language_settings
 import shiguangschedule.shared.generated.resources.language_follow_system
 import shiguangschedule.shared.generated.resources.language_names
 import shiguangschedule.shared.generated.resources.language_tags
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 跨平台语言设置契约声明
@@ -73,6 +80,20 @@ fun LanguageSettingScreen(
             add(LanguageItem(followSystemText, ""))
             addAll(names.zip(tags) { name, tag -> LanguageItem(name, tag) })
         }
+    }
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+
+    if (useMiuix) {
+        MiuixLanguageSettingScreen(
+            onBack = onBack,
+            languageList = languageList,
+            currentTag = currentTag,
+            onLanguageSelected = { tag ->
+                currentTag = tag
+                PlatformLocaleManager.setLanguageTag(tag)
+            }
+        )
+        return
     }
 
     Scaffold(
@@ -121,6 +142,67 @@ fun LanguageSettingScreen(
                         )
                     }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixLanguageSettingScreen(
+    onBack: () -> Unit,
+    languageList: List<LanguageItem>,
+    currentTag: String,
+    onLanguageSelected: (String) -> Unit,
+) {
+    val scrollBehavior = top.yukonga.miuix.kmp.basic.MiuixScrollBehavior()
+    val title = stringResource(Res.string.item_language_settings)
+
+    top.yukonga.miuix.kmp.basic.Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MiuixTheme.colorScheme.surface,
+        topBar = {
+            top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = title,
+                largeTitle = title,
+                color = MiuixTheme.colorScheme.surface,
+                scrollBehavior = scrollBehavior,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                        top.yukonga.miuix.kmp.basic.Icon(
+                            vectorResource(Res.drawable.arrow_back_24px),
+                            stringResource(Res.string.a11y_back),
+                            tint = MiuixTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                defaultWindowInsetsPadding = true,
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        ) {
+            top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = PaddingValues(vertical = 4.dp),
+            ) {
+                languageList.forEach { item ->
+                    val isSelected = if (item.tag.isEmpty()) currentTag.isEmpty() else currentTag.startsWith(item.tag)
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = item.name,
+                        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 13.dp),
+                        endActions = {
+                            top.yukonga.miuix.kmp.basic.RadioButton(
+                                selected = isSelected,
+                                onClick = null,
+                            )
+                        },
+                        onClick = {
+                            if (!isSelected) onLanguageSelected(item.tag)
+                        },
+                    )
+                }
             }
         }
     }

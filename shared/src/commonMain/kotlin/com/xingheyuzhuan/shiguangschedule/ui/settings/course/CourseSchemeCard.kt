@@ -33,6 +33,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.data.db.main.TimeSlot
 import com.xingheyuzhuan.shiguangschedule.data.model.DualColor
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -70,6 +73,10 @@ fun CourseSchemeCard(
     onToggleCustomTime: (Boolean) -> Unit,
     showRemoveButton: Boolean
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        MiuixCourseSchemeCard(scheme, courseColorMaps, timeSlots, onTeacherChange, onPositionChange, onRemarkChange, onColorClick, onTimeClick, onWeeksClick, onDayClick, onRemoveClick, onToggleCustomTime, showRemoveButton)
+        return
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -213,6 +220,60 @@ fun CourseSchemeCard(
                         onClick = onWeeksClick,
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixCourseSchemeCard(
+    scheme: CourseScheme,
+    courseColorMaps: List<DualColor>,
+    timeSlots: List<TimeSlot>,
+    onTeacherChange: (String) -> Unit,
+    onPositionChange: (String) -> Unit,
+    onRemarkChange: (String) -> Unit,
+    onColorClick: () -> Unit,
+    onTimeClick: () -> Unit,
+    onWeeksClick: () -> Unit,
+    onDayClick: () -> Unit,
+    onRemoveClick: () -> Unit,
+    onToggleCustomTime: (Boolean) -> Unit,
+    showRemoveButton: Boolean,
+) {
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)
+    ) {
+        Row(Modifier.height(IntrinsicSize.Min)) {
+            ColorIndicatorSection(scheme.colorIndex, courseColorMaps, onColorClick)
+            Column(Modifier.padding(16.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    top.yukonga.miuix.kmp.basic.TextField(scheme.teacher, onTeacherChange, Modifier.weight(1f), label = stringResource(Res.string.label_teacher), singleLine = true)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_custom_time), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                        top.yukonga.miuix.kmp.basic.Switch(scheme.isCustomTime, onToggleCustomTime)
+                    }
+                    if (showRemoveButton) top.yukonga.miuix.kmp.basic.IconButton(onRemoveClick) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), null, tint = MiuixTheme.colorScheme.error) }
+                }
+                top.yukonga.miuix.kmp.basic.TextField(scheme.position, onPositionChange, Modifier.fillMaxWidth(), label = stringResource(Res.string.label_position), singleLine = true)
+                top.yukonga.miuix.kmp.basic.TextField(scheme.remark, onRemarkChange, Modifier.fillMaxWidth().heightIn(min = 56.dp, max = 140.dp), label = stringResource(Res.string.label_remark), singleLine = false)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (scheme.isCustomTime) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val days = stringArrayResource(Res.array.week_days_full_names)
+                            TimeSection(stringResource(Res.string.label_day_of_week), days.getOrNull(scheme.day - 1) ?: "", onDayClick, Modifier.fillMaxWidth())
+                            TimeSection(stringResource(Res.string.label_custom_time), "${scheme.customStartTime}-${scheme.customEndTime}", onTimeClick, Modifier.fillMaxWidth())
+                        }
+                    } else {
+                        val days = stringArrayResource(Res.array.week_days_full_names)
+                        val start = timeSlots.find { it.number == scheme.startSection }?.alias ?: scheme.startSection.toString()
+                        val end = timeSlots.find { it.number == scheme.endSection }?.alias ?: scheme.endSection.toString()
+                        val suffix = stringResource(Res.string.label_section_range_suffix)
+                        TimeSection(days.getOrNull(scheme.day - 1) ?: "", if (start == end) "$start $suffix" else "$start-$end $suffix", onTimeClick, Modifier.weight(1f))
+                    }
+                    WeekSection(scheme.weeks, onWeeksClick, Modifier.weight(1f))
                 }
             }
         }

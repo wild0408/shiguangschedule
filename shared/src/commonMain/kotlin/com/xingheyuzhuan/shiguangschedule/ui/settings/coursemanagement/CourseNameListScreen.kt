@@ -1,6 +1,7 @@
 package com.xingheyuzhuan.shiguangschedule.ui.settings.coursemanagement
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -40,8 +44,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.navigation.AddEditCourseChannel
 import com.xingheyuzhuan.shiguangschedule.navigation.PresetCourseData
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -64,6 +70,7 @@ import shiguangschedule.shared.generated.resources.item_course_management
 import shiguangschedule.shared.generated.resources.menu_open_24px
 import shiguangschedule.shared.generated.resources.text_no_unique_courses_hint
 import shiguangschedule.shared.generated.resources.title_selected_items_count
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 一级页面：展示所有不重复的课程名称列表 (Master View)。
@@ -81,10 +88,46 @@ fun CourseNameListScreen(
 
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedCourseNames = remember { mutableStateListOf<String>() }
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     val exitSelectionMode: () -> Unit = {
         isSelectionMode = false
         selectedCourseNames.clear()
+    }
+
+    if (useMiuix) {
+        MiuixCourseNameListScreen(
+            onNavigate = onNavigate,
+            onBack = onBack,
+            uniqueCourseNames = uniqueCourseNames,
+            isSelectionMode = isSelectionMode,
+            selectedCourseNames = selectedCourseNames,
+            onExitSelectionMode = exitSelectionMode,
+            onEnterSelectionMode = { isSelectionMode = true },
+            onToggleSelected = { name ->
+                if (selectedCourseNames.contains(name)) selectedCourseNames.remove(name) else selectedCourseNames.add(name)
+            },
+            onDeleteSelected = {
+                if (selectedCourseNames.isNotEmpty()) {
+                    coroutineScope.launch { viewModel.deleteSelectedCourses(selectedCourseNames); exitSelectionMode() }
+                }
+            },
+            onCreateCourse = {
+                coroutineScope.launch {
+                    AddEditCourseChannel.sendEvent(PresetCourseData(startSection = 1, endSection = 2))
+                    onNavigate(Destination.AddEditCourse(courseId = null))
+                }
+            },
+            onCourseClick = { name ->
+                if (isSelectionMode) {
+                    if (selectedCourseNames.contains(name)) selectedCourseNames.remove(name) else selectedCourseNames.add(name)
+                } else onNavigate(Destination.CourseManagementDetail(courseName = name))
+            },
+            onCourseLongClick = { name ->
+                if (!isSelectionMode) { isSelectionMode = true; selectedCourseNames.add(name) }
+            }
+        )
+        return
     }
 
     Scaffold(
@@ -328,6 +371,121 @@ fun CourseNameCard(
                     .align(Alignment.BottomEnd)
                     .sizeIn(minWidth = 20.dp, minHeight = 20.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun MiuixCourseNameListScreen(
+    onNavigate: (Destination) -> Unit,
+    onBack: () -> Unit,
+    uniqueCourseNames: List<CourseNameCount>,
+    isSelectionMode: Boolean,
+    selectedCourseNames: MutableList<String>,
+    onExitSelectionMode: () -> Unit,
+    onEnterSelectionMode: () -> Unit,
+    onToggleSelected: (String) -> Unit,
+    onDeleteSelected: () -> Unit,
+    onCreateCourse: () -> Unit,
+    onCourseClick: (String) -> Unit,
+    onCourseLongClick: (String) -> Unit,
+) {
+    val title = if (isSelectionMode) stringResource(Res.string.title_selected_items_count, selectedCourseNames.size) else stringResource(Res.string.item_course_management)
+    val scrollBehavior = top.yukonga.miuix.kmp.basic.MiuixScrollBehavior()
+    top.yukonga.miuix.kmp.basic.Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MiuixTheme.colorScheme.surface,
+        topBar = {
+            top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = title,
+                largeTitle = title,
+                color = MiuixTheme.colorScheme.surface,
+                scrollBehavior = scrollBehavior,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(if (isSelectionMode) onExitSelectionMode else onBack) {
+                        top.yukonga.miuix.kmp.basic.Icon(
+                            vectorResource(if (isSelectionMode) Res.drawable.close_24px else Res.drawable.arrow_back_24px),
+                            stringResource(if (isSelectionMode) Res.string.a11y_cancel_selection else Res.string.a11y_back)
+                        )
+                    }
+                },
+                actions = {
+                    if (isSelectionMode) {
+                        val allSelected = uniqueCourseNames.isNotEmpty() && selectedCourseNames.size == uniqueCourseNames.size
+                        top.yukonga.miuix.kmp.basic.IconButton({
+                            selectedCourseNames.clear()
+                            if (!allSelected) selectedCourseNames.addAll(uniqueCourseNames.map { it.name })
+                        }, enabled = uniqueCourseNames.isNotEmpty()) {
+                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.check_24px), stringResource(if (allSelected) Res.string.action_deselect_all else Res.string.action_select_all))
+                        }
+                        top.yukonga.miuix.kmp.basic.IconButton(onDeleteSelected, enabled = selectedCourseNames.isNotEmpty()) {
+                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), stringResource(Res.string.a11y_delete), tint = MiuixTheme.colorScheme.error)
+                        }
+                    }
+                    top.yukonga.miuix.kmp.basic.IconButton(if (isSelectionMode) onExitSelectionMode else onEnterSelectionMode) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.menu_open_24px), stringResource(if (isSelectionMode) Res.string.a11y_exit_selection_mode else Res.string.a11y_enter_selection_mode))
+                    }
+                },
+                defaultWindowInsetsPadding = true,
+            )
+        },
+        floatingActionButton = {
+            if (!isSelectionMode) top.yukonga.miuix.kmp.basic.FloatingActionButton(onCreateCourse) {
+                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.add_24px), stringResource(Res.string.action_add))
+            }
+        }
+    ) { paddingValues ->
+        if (uniqueCourseNames.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_no_unique_courses_hint), style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(uniqueCourseNames, key = { it.name }) { item ->
+                    MiuixCourseNameCard(item.name, item.count, item.name in selectedCourseNames, onCourseClick, onCourseLongClick)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MiuixCourseNameCard(
+    name: String,
+    instanceCount: Int,
+    isSelected: Boolean,
+    onCourseClick: (String) -> Unit,
+    onCourseLongClick: (String) -> Unit,
+) {
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth().height(100.dp).combinedClickable(onClick = { onCourseClick(name) }, onLongClick = { onCourseLongClick(name) }),
+        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+            color = if (isSelected) MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.24f) else MiuixTheme.colorScheme.surfaceContainer
+        ),
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            top.yukonga.miuix.kmp.basic.Text(
+                name,
+                style = MiuixTheme.textStyles.body1,
+                color = if (isSelected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(end = 28.dp),
+            )
+            Box(
+                Modifier.align(Alignment.BottomEnd).sizeIn(minWidth = 22.dp, minHeight = 22.dp).background(MiuixTheme.colorScheme.primaryContainer, RoundedCornerShape(11.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                top.yukonga.miuix.kmp.basic.Text(instanceCount.toString(), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onPrimaryContainer)
+            }
         }
     }
 }

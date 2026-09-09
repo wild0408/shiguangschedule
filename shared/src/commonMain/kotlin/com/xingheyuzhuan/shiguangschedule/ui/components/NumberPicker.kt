@@ -38,6 +38,9 @@ import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.a11y_state_not_selected
 import shiguangschedule.shared.generated.resources.a11y_state_selected
 import kotlin.math.abs
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun <T> NativeNumberPicker(
@@ -51,6 +54,9 @@ fun <T> NativeNumberPicker(
     dividerColor: Color = MaterialTheme.colorScheme.primary,
     dividerSize: Dp = 1.dp,
 ) {
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val pickerPrimary = if (useMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+    val pickerOnSurface = if (useMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface
     // 校验可见项数量
     require(visibleItemsCount >= 3 && visibleItemsCount % 2 != 0) {
         "可见项数量必须是大于等于 3 的奇数"
@@ -115,7 +121,7 @@ fun <T> NativeNumberPicker(
             .clipToBounds()
     ) {
         // 计算分隔线位置
-        Box(
+        if (!useMiuix) Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(itemHeight)
@@ -123,7 +129,7 @@ fun <T> NativeNumberPicker(
         ) {
             HorizontalDivider(
                 modifier = Modifier.align(Alignment.TopCenter),
-                color = dividerColor,
+                color = if (useMiuix) pickerPrimary else dividerColor,
                 thickness = dividerSize
             )
             HorizontalDivider(
@@ -151,20 +157,20 @@ fun <T> NativeNumberPicker(
                     distance <= 1f -> {
                         lerp(30.sp, 25.sp, distance) to
                                 lerp(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    pickerPrimary,
+                                    pickerOnSurface.copy(alpha = 0.7f),
                                     distance
                                 )
                     }
                     distance <= 2f -> {
                         lerp(25.sp, 20.sp, distance - 1f) to
                                 lerp(
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                    pickerOnSurface.copy(alpha = 0.7f),
+                                    pickerOnSurface.copy(alpha = 0.4f),
                                     distance - 1f
                                 )
                     }
-                    else -> 20.sp to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    else -> 20.sp to pickerOnSurface.copy(alpha = 0.4f)
                 }
 
                 Box(

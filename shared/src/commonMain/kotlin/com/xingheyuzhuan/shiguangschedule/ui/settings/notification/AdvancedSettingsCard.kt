@@ -15,6 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.item_clear_skipped_dates
@@ -38,13 +41,36 @@ fun AdvancedSettingsCard(
     onViewSkippedDates: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
     Column(modifier = modifier) {
-        Text(
-            text = stringResource(Res.string.section_title_advanced),
-            style = MaterialTheme.typography.titleLarge
-        )
+        if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.section_title_advanced))
+        else Text(text = stringResource(Res.string.section_title_advanced), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
-        Card(
+        if (useMiuix) {
+            top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)
+            ) {
+                Column {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.section_title_skip_dates), style = MiuixTheme.textStyles.title3)
+                        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_skip_dates_experimental), style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, modifier = Modifier.padding(top = 6.dp))
+                    }
+                    SettingItemRow(
+                        title = stringResource(Res.string.item_update_holiday_info),
+                        currentValue = stringResource(Res.string.update_holiday_info_hint),
+                        onClick = onUpdateHolidays,
+                        trailing = { if (uiState.isLoading) top.yukonga.miuix.kmp.basic.CircularProgressIndicator(Modifier.size(24.dp)) }
+                    )
+                    SettingItemRow(title = stringResource(Res.string.item_clear_skipped_dates), onClick = onClearSkippedDates)
+                    SettingItemRow(
+                        title = stringResource(Res.string.item_view_skipped_dates),
+                        currentValue = if (uiState.skippedDates.isNotEmpty()) stringResource(Res.string.skipped_dates_count_format, uiState.skippedDates.size) else stringResource(Res.string.skipped_dates_none),
+                        onClick = onViewSkippedDates
+                    )
+                }
+            }
+        } else Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant

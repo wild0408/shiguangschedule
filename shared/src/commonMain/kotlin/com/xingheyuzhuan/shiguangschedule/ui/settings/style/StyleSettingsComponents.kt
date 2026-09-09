@@ -14,6 +14,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -691,6 +693,206 @@ fun ColorPickerItem(
                         showInputMode = true
                     )
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun MiuixSettingsListContent(
+    currentStyle: ScheduleGridStyleComposed,
+    viewModel: StyleSettingsViewModel,
+    onWallpaperClick: () -> Unit,
+    onPick: (isDark: Boolean, index: Int) -> Unit,
+) {
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        top.yukonga.miuix.kmp.basic.TextButton(
+            text = stringResource(Res.string.action_reset_style),
+            onClick = { showResetDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error),
+        )
+
+        MiuixStyleGroup(stringResource(Res.string.style_category_interface)) {
+            MiuixWallpaperItem(currentStyle.backgroundImagePath, onWallpaperClick) { viewModel.removeWallpaper() }
+            MiuixStyleSwitchItem(stringResource(Res.string.label_schedule_mode_24h), currentStyle.scheduleMode == ScheduleModeProto.TIME_24H_MODE) {
+                viewModel.updateScheduleMode(if (it) ScheduleModeProto.TIME_24H_MODE else ScheduleModeProto.SECTION_MODE)
+            }
+            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_section_time), currentStyle.hideSectionTime, viewModel::updateHideSectionTime)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_date_under_day), currentStyle.hideDateUnderDay, viewModel::updateHideDateUnderDay)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_grid_lines), currentStyle.hideGridLines, viewModel::updateHideGridLines)
+            MiuixColorPickerItem(stringResource(Res.string.label_page_text_color), currentStyle.pageTextColor, viewModel::updatePageTextColor) { viewModel.updatePageTextColor(null) }
+        }
+
+        MiuixStyleGroup(stringResource(Res.string.style_category_grid_size)) {
+            MiuixStyleSliderItem(stringResource(Res.string.label_section_height), currentStyle.sectionHeight.value, 40f..120f, 1f, viewModel::updateSectionHeight)
+            MiuixStyleSliderItem(stringResource(Res.string.label_time_column_width), currentStyle.timeColumnWidth.value, 20f..80f, 1f, viewModel::updateTimeColumnWidth)
+            MiuixStyleSliderItem(stringResource(Res.string.label_day_header_height), currentStyle.dayHeaderHeight.value, 30f..80f, 1f, viewModel::updateDayHeaderHeight)
+        }
+
+        MiuixStyleGroup(stringResource(Res.string.style_category_course_block)) {
+            MiuixColorPickerItem(stringResource(Res.string.label_course_text_color), currentStyle.courseTextColor, viewModel::updateCourseTextColor) { viewModel.updateCourseTextColor(null) }
+            MiuixStyleSwitchItem(stringResource(Res.string.label_show_start_time), currentStyle.showStartTime, viewModel::updateShowStartTime)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_location), currentStyle.hideLocation, viewModel::updateHideLocation)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_teacher), currentStyle.hideTeacher, viewModel::updateHideTeacher)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_remove_location_at), currentStyle.removeLocationAt, viewModel::updateRemoveLocationAt)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_text_align_center_h), currentStyle.textAlignCenterHorizontal, viewModel::updateTextAlignCenterHorizontal)
+            MiuixStyleSwitchItem(stringResource(Res.string.label_text_align_center_v), currentStyle.textAlignCenterVertical, viewModel::updateTextAlignCenterVertical)
+            MiuixBorderTypeSelector(currentStyle.borderType, viewModel::updateBorderType)
+            MiuixStyleSliderItem(stringResource(Res.string.label_font_scale), currentStyle.fontScale, 0.5f..2f, 0.1f, viewModel::updateCourseBlockFontScale)
+            MiuixStyleSliderItem(stringResource(Res.string.label_corner_radius), currentStyle.courseBlockCornerRadius.value, 0f..24f, 1f, viewModel::updateCornerRadius)
+            MiuixStyleSliderItem(stringResource(Res.string.label_inner_padding), currentStyle.courseBlockInnerPadding.value, 0f..12f, 1f, viewModel::updateInnerPadding)
+            MiuixStyleSliderItem(stringResource(Res.string.label_outer_padding), currentStyle.courseBlockOuterPadding.value, 0f..8f, 1f, viewModel::updateOuterPadding)
+            MiuixStyleSliderItem(stringResource(Res.string.label_opacity), currentStyle.courseBlockAlpha, 0.1f..1f, 0.05f, viewModel::updateAlpha)
+        }
+
+        top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.style_category_color_scheme))
+        MiuixColorSchemeSection(stringResource(Res.string.title_light_color_pool), false, currentStyle.courseColorMaps.map { it.light }) { onPick(false, it) }
+        MiuixColorSchemeSection(stringResource(Res.string.title_dark_color_pool), true, currentStyle.courseColorMaps.map { it.dark }) { onPick(true, it) }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    top.yukonga.miuix.kmp.overlay.OverlayDialog(
+        title = stringResource(Res.string.dialog_reset_title),
+        summary = stringResource(Res.string.dialog_reset_message),
+        show = showResetDialog,
+        onDismissRequest = { showResetDialog = false },
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), { showResetDialog = false }, Modifier.weight(1f))
+            top.yukonga.miuix.kmp.basic.TextButton(
+                text = stringResource(Res.string.action_confirm),
+                onClick = { viewModel.resetStyleSettings(); showResetDialog = false },
+                modifier = Modifier.weight(1f),
+                colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiuixStyleGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    top.yukonga.miuix.kmp.basic.SmallTitle(title)
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(vertical = 4.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun MiuixStyleSwitchItem(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    top.yukonga.miuix.kmp.basic.BasicComponent(
+        modifier = Modifier.fillMaxWidth(),
+        title = label,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        endActions = { top.yukonga.miuix.kmp.basic.Switch(checked, onCheckedChange) },
+        onClick = { onCheckedChange(!checked) },
+    )
+}
+
+@Composable
+private fun MiuixWallpaperItem(path: String, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val hasWallpaper = path.isNotEmpty()
+    Row(
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_wallpaper), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
+            top.yukonga.miuix.kmp.basic.Text(
+                if (hasWallpaper) stringResource(Res.string.desc_wallpaper_set) else stringResource(Res.string.desc_wallpaper_unset),
+                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                color = if (hasWallpaper) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
+        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.image_24px), null, tint = if (hasWallpaper) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    }
+}
+
+@Composable
+private fun MiuixStyleSliderItem(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    stepValue: Float,
+    onValueChange: (Float) -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    var input by remember(value, showDialog) { mutableStateOf(if (stepValue >= 1f) value.toInt().toString() else "%.2f".format(value).trimEnd('0').trimEnd('.')) }
+    val steps = (((range.endInclusive - range.start) / stepValue).roundToInt() - 1).coerceAtLeast(0)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            top.yukonga.miuix.kmp.basic.Text(label, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
+            top.yukonga.miuix.kmp.basic.TextButton(input, { showDialog = true })
+        }
+        top.yukonga.miuix.kmp.basic.Slider(value, onValueChange, Modifier.fillMaxWidth(), valueRange = range, steps = steps)
+    }
+    top.yukonga.miuix.kmp.overlay.OverlayDialog(title = label, summary = "${stringResource(Res.string.label_range)}: ${range.start} - ${range.endInclusive}", show = showDialog, onDismissRequest = { showDialog = false }) {
+        Column(Modifier.fillMaxWidth()) {
+            top.yukonga.miuix.kmp.basic.TextField(input, { input = it.filter { char -> char.isDigit() || char == '.' } }, Modifier.fillMaxWidth(), label = stringResource(Res.string.placeholder_input_value), singleLine = true)
+            Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), { showDialog = false }, Modifier.weight(1f))
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), {
+                    input.toFloatOrNull()?.let { raw ->
+                        val clamped = raw.coerceIn(range.start, range.endInclusive)
+                        val snapped = range.start + ((clamped - range.start) / stepValue).roundToInt() * stepValue
+                        onValueChange(snapped); showDialog = false
+                    }
+                }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixBorderTypeSelector(currentType: BorderTypeProto, onTypeChange: (BorderTypeProto) -> Unit) {
+    val types = listOf(BorderTypeProto.BORDER_TYPE_NONE, BorderTypeProto.BORDER_TYPE_SOLID, BorderTypeProto.BORDER_TYPE_DASHED)
+    val labels = listOf(stringResource(Res.string.label_none), stringResource(Res.string.border_type_solid), stringResource(Res.string.border_type_dashed))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_border_type), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
+        top.yukonga.miuix.kmp.basic.TabRow(labels, types.indexOf(currentType).coerceAtLeast(0), { onTypeChange(types[it]) }, Modifier.padding(top = 8.dp))
+    }
+}
+
+@Composable
+private fun MiuixColorPickerItem(label: String, currentColor: Color?, onColorChanged: (Color) -> Unit, onReset: () -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+    top.yukonga.miuix.kmp.basic.BasicComponent(
+        modifier = Modifier.fillMaxWidth(),
+        title = label,
+        summary = if (currentColor == null) stringResource(Res.string.status_not_set) else null,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        endActions = { Box(Modifier.size(28.dp).clip(CircleShape).background(currentColor ?: top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh)) },
+        onClick = { showDialog = true },
+    )
+    top.yukonga.miuix.kmp.overlay.OverlayDialog(title = label, show = showDialog, onDismissRequest = { showDialog = false }) {
+        Column(Modifier.fillMaxWidth()) {
+            AdvancedColorPicker(currentColor ?: top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary, onColorChanged, ColorPickerConfig(showAlpha = false, showInputMode = true))
+            top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_reset), { onReset(); showDialog = false }, Modifier.fillMaxWidth(), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+        }
+    }
+}
+
+@Composable
+private fun MiuixColorSchemeSection(title: String, dark: Boolean, colors: List<Color>, onEditColor: (Int) -> Unit) {
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(16.dp),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = if (dark) Color(0xFF242424) else Color.White),
+    ) {
+        top.yukonga.miuix.kmp.basic.Text(title, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1, color = if (dark) Color.White else Color.Black)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            colors.forEachIndexed { index, color ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(color).clickable { onEditColor(index) })
+                    top.yukonga.miuix.kmp.basic.Text("${index + 1}", style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = if (dark) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f))
+                }
             }
         }
     }

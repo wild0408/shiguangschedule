@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -30,10 +32,22 @@ fun NotificationSettingsScreen(
     viewModel: NotificationSettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     Scaffold(
+        containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else androidx.compose.material3.MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = stringResource(Res.string.title_course_notification_settings),
+                largeTitle = stringResource(Res.string.title_course_notification_settings),
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
+                    }
+                },
+                defaultWindowInsetsPadding = true,
+            ) else TopAppBar(
                 title = { Text(stringResource(Res.string.title_course_notification_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

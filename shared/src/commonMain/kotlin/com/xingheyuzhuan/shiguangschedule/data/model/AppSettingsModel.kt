@@ -107,6 +107,9 @@ data class AppSettingsModel(
     /** 应用主题模式 */
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 
+    /** 界面组件风格 */
+    val uiStyle: AppUiStyle = AppUiStyle.MIUIX,
+
     /** 是否开启动态取色 (Material You) */
     val useDynamicColor: Boolean = true,
 
@@ -135,6 +138,7 @@ data class AppSettingsModel(
         val KEY_SHOW_NON_CURRENT_WEEK_COURSES = booleanPreferencesKey("show_non_current_week_courses")
         val KEY_START_SCREEN = stringPreferencesKey("start_screen")
         val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        val KEY_UI_STYLE = stringPreferencesKey("ui_style")
         val KEY_USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
         val KEY_CUSTOM_LIGHT_PRIMARY = longPreferencesKey("custom_light_primary")
         val KEY_CUSTOM_DARK_PRIMARY = longPreferencesKey("custom_dark_primary")
@@ -156,6 +160,7 @@ data class AppSettingsModel(
                 showNonCurrentWeekCourses = prefs[KEY_SHOW_NON_CURRENT_WEEK_COURSES] ?: d.showNonCurrentWeekCourses,
                 startScreen = prefs[KEY_START_SCREEN]?.let { StartScreen.fromString(it) } ?: d.startScreen,
                 themeMode = prefs[KEY_THEME_MODE]?.let { AppThemeMode.fromString(it) } ?: d.themeMode,
+                uiStyle = AppUiStyle.fromString(prefs[KEY_UI_STYLE]),
                 useDynamicColor = prefs[KEY_USE_DYNAMIC_COLOR] ?: d.useDynamicColor,
                 customLightPrimary = prefs[KEY_CUSTOM_LIGHT_PRIMARY] ?: d.customLightPrimary,
                 customDarkPrimary = prefs[KEY_CUSTOM_DARK_PRIMARY] ?: d.customDarkPrimary,
@@ -163,4 +168,10 @@ data class AppSettingsModel(
             )
         }
     }
+}
+
+enum class AppUiStyle(val value: String, val labelRes: StringResource) {
+    MIUIX("MIUIX", Res.string.ui_style_miuix),
+    MATERIAL("MATERIAL", Res.string.ui_style_material);
+    companion object { fun fromString(value: String?): AppUiStyle = entries.find { it.value == value } ?: MIUIX }
 }

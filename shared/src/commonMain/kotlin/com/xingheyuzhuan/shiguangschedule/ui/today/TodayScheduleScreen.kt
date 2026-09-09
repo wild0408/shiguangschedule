@@ -38,6 +38,8 @@ import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.model.ScheduleGridStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdaptiveNavigationScaffold
 import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalIsDarkTheme
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -58,6 +60,7 @@ import shiguangschedule.shared.generated.resources.status_semester_ended
 import shiguangschedule.shared.generated.resources.text_no_courses_today
 import shiguangschedule.shared.generated.resources.title_current_week
 import shiguangschedule.shared.generated.resources.title_semester_not_set
+import shiguangschedule.shared.generated.resources.title_vacation
 import shiguangschedule.shared.generated.resources.title_today_schedule
 import shiguangschedule.shared.generated.resources.title_vacation_until_start
 import shiguangschedule.shared.generated.resources.week_days_full_names
@@ -78,30 +81,50 @@ fun TodayScheduleScreen(
     val uiState by viewModel.uiState.collectAsState()
     val gridStyle by viewModel.gridStyle.collectAsState()
     val isDark = LocalIsDarkTheme.current
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     AdaptiveNavigationScaffold(
         currentDestination = Destination.TodaySchedule,
         onTabSelected = { dest -> onNavigate(dest) }
     ) { navPadding ->
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(Res.string.title_today_schedule),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors()
-                )
+        if (useMiuix) {
+            top.yukonga.miuix.kmp.basic.Scaffold(
+                containerColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                topBar = {
+                    top.yukonga.miuix.kmp.basic.TopAppBar(
+                        title = stringResource(Res.string.title_today_schedule),
+                        largeTitle = stringResource(Res.string.title_today_schedule),
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                        defaultWindowInsetsPadding = true,
+                    )
+                }
+            ) { innerPadding ->
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    when (val state = uiState) {
+                        is TodayUiState.Loading -> { }
+                        is TodayUiState.Success -> TodayContent(state, gridStyle, isDark, navPadding)
+                    }
+                }
             }
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                when (val state = uiState) {
-                    is TodayUiState.Loading -> { /* 可放置圆圈加载 */ }
-                    is TodayUiState.Success -> {
-                        TodayContent(state, gridStyle, isDark, navPadding)
+        } else {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(
+                                text = stringResource(Res.string.title_today_schedule),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors()
+                    )
+                }
+            ) { innerPadding ->
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    when (val state = uiState) {
+                        is TodayUiState.Loading -> { }
+                        is TodayUiState.Success -> TodayContent(state, gridStyle, isDark, navPadding)
                     }
                 }
             }
@@ -116,6 +139,10 @@ fun TodayContent(
     isDark: Boolean,
     navPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    if (com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle.current == AppUiStyle.MIUIX) {
+        MiuixTodayContent(state, gridStyle, isDark, navPadding)
+        return
+    }
     val currentTime = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time }
 
     val targetScrollIndex = remember(state.courses, currentTime) {
@@ -338,5 +365,59 @@ private fun EmptyStateView() {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.outline
         )
+    }
+}
+
+@Composable
+private fun MiuixTodayContent(
+    state: TodayUiState.Success,
+    gridStyle: ScheduleGridStyle,
+    isDark: Boolean,
+    navPadding: PaddingValues,
+) {
+    val weekDays = stringArrayResource(Res.array.week_days_full_names)
+    val dateText = stringResource(Res.string.date_format_year_month_day, state.today.year.toString(), state.today.month.number.toString(), state.today.day.toString())
+    val weekDay = weekDays.getOrNull(state.today.dayOfWeek.isoDayNumber - 1).orEmpty()
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        top.yukonga.miuix.kmp.basic.Text("$dateText $weekDay", style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 12.dp))
+        top.yukonga.miuix.kmp.basic.Text(
+            when (state.status) {
+                TodayStatus.NoSemesterConfig -> stringResource(Res.string.title_semester_not_set)
+                TodayStatus.Vacation -> stringResource(Res.string.title_vacation)
+                TodayStatus.SemesterEnded -> stringResource(Res.string.status_semester_ended, 1)
+                TodayStatus.Normal -> stringResource(Res.string.title_current_week, state.weekIndex.toString())
+            },
+            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
+            color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary
+        )
+        if (state.courses.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_no_courses_today), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            }
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = navPadding.calculateBottomPadding() + 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                itemsIndexed(state.courses) { _, model -> MiuixCourseTimelineItem(model, gridStyle, isDark) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixCourseTimelineItem(model: CourseDisplayModel, gridStyle: ScheduleGridStyle, isDark: Boolean) {
+    val colorPair = gridStyle.courseColorMaps.getOrElse(model.course.colorInt) { ScheduleGridStyle.DEFAULT_COLOR_MAPS[0] }
+    val themeColor = if (isDark) colorPair.dark else colorPair.light
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Column(Modifier.width(58.dp), horizontalAlignment = Alignment.End) {
+            top.yukonga.miuix.kmp.basic.Text(model.startTime ?: EMPTY_TIME_PLACEHOLDER, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3, fontWeight = FontWeight.SemiBold)
+            top.yukonga.miuix.kmp.basic.Text(model.endTime ?: EMPTY_TIME_PLACEHOLDER, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions)
+        }
+        Spacer(Modifier.width(12.dp))
+        top.yukonga.miuix.kmp.basic.Card(Modifier.weight(1f)) {
+            Column(Modifier.padding(14.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(model.course.name, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3, fontWeight = FontWeight.SemiBold)
+                if (model.course.position.isNotBlank()) top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.course_position_prefix, model.course.position), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2)
+                if (model.course.teacher.isNotBlank()) top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.course_teacher_prefix, model.course.teacher), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2)
+            }
+        }
     }
 }

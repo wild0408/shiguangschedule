@@ -49,7 +49,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xingheyuzhuan.shiguangschedule.data.model.DualColor
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalIsDarkTheme
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.resolveCourseColor
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.unit.DpSize
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -76,6 +81,15 @@ fun WeekSection(
     val label = stringResource(Res.string.label_course_weeks)
     val noneSelected = stringResource(Res.string.label_none)
 
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.Card(modifier = modifier.clickable(onClick = onClick), colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
+            Column(Modifier.padding(12.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(label, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.primary)
+                top.yukonga.miuix.kmp.basic.Text(if (selectedWeeks.isEmpty()) noneSelected else stringResource(Res.string.text_weeks_selected, selectedWeeks.sorted().joinToString(", ")), style = MiuixTheme.textStyles.body2, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+        return
+    }
     Surface(
         onClick = onClick,
         modifier = modifier,
@@ -106,6 +120,15 @@ fun TimeSection(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.Card(modifier = modifier.clickable(onClick = onClick), colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
+            Column(Modifier.padding(12.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(dayName, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.primary)
+                top.yukonga.miuix.kmp.basic.Text(timeDesc, style = MiuixTheme.textStyles.body2, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+        return
+    }
     Surface(
         onClick = onClick,
         modifier = modifier,
@@ -127,9 +150,12 @@ fun ColorIndicatorSection(
     onClick: () -> Unit
 ) {
     val isDark = LocalIsDarkTheme.current
-    val displayColor = colorMaps.getOrNull(colorIndex)?.let {
-        if (isDark) it.dark else it.light
-    } ?: MaterialTheme.colorScheme.outlineVariant
+    val displayColor = resolveCourseColor(
+        colorIndex = colorIndex,
+        colorMaps = colorMaps,
+        isDark = isDark,
+        useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    )
 
     Box(
         modifier = Modifier
@@ -158,6 +184,31 @@ fun WeekSelectorBottomSheet(
     val actionDoubleWeek = stringResource(Res.string.action_double_week)
     val actionCancel = stringResource(Res.string.action_cancel)
     val actionConfirm = stringResource(Res.string.action_confirm)
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = titleSelectWeeks, onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyVerticalGrid(columns = GridCells.Adaptive(48.dp), modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp), contentPadding = PaddingValues(4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(totalWeeks) { index ->
+                        val week = index + 1
+                        val selected = week in tempSelectedWeeks
+                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.size(48.dp).clickable { tempSelectedWeeks = if (selected) tempSelectedWeeks - week else tempSelectedWeeks + week }, colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.surfaceContainer)) {
+                            Box(Modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) { top.yukonga.miuix.kmp.basic.Text(week.toString(), color = if (selected) MiuixTheme.colorScheme.onPrimary else MiuixTheme.colorScheme.onSurface) }
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(actionSelectAll, { tempSelectedWeeks = if (tempSelectedWeeks.size == totalWeeks) emptySet() else (1..totalWeeks).toSet() }, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(actionSingleWeek, { tempSelectedWeeks = (1..totalWeeks).filter { it % 2 != 0 }.toSet() }, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(actionDoubleWeek, { tempSelectedWeeks = (1..totalWeeks).filter { it % 2 == 0 }.toSet() }, Modifier.weight(1f))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(actionCancel, onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(actionConfirm, { onConfirm(tempSelectedWeeks) }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -283,6 +334,26 @@ fun ColorPickerBottomSheet(
     val isDark = LocalIsDarkTheme.current
     val actionCancel = stringResource(Res.string.action_cancel)
     val actionConfirm = stringResource(Res.string.action_confirm)
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.title_select_color), onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyVerticalGrid(columns = GridCells.Fixed(6), modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    itemsIndexed(colorMaps) { index, _ ->
+                        val color = resolveCourseColor(index, colorMaps, isDark, useMiuix = true)
+                        val selected = tempSelectedIndex == index
+                        Box(Modifier.aspectRatio(1f).clip(CircleShape).clickable { tempSelectedIndex = index }.then(if (selected) Modifier.border(3.dp, MiuixTheme.colorScheme.primary, CircleShape) else Modifier).padding(4.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+                            if (selected) top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.check_24px), null, Modifier.size(20.dp), tint = MiuixTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(actionCancel, onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(actionConfirm, { onConfirm(tempSelectedIndex) }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -307,8 +378,8 @@ fun ColorPickerBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                itemsIndexed(colorMaps) { index, dualColor ->
-                    val color = if (isDark) dualColor.dark else dualColor.light
+                itemsIndexed(colorMaps) { index, _ ->
+                    val color = resolveCourseColor(index, colorMaps, isDark, useMiuix = false)
                     val isSelected = tempSelectedIndex == index
 
                     Box(

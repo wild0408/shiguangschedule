@@ -378,6 +378,8 @@
     <string name="action_select_table">选择课表</string>
     <string name="label_tweak_from_date">被调整日期</string>
     <string name="label_tweak_to_date">调整到日期</string>
+    <string name="dialog_title_select_tweak_from_date">选择被调整日期</string>
+    <string name="dialog_title_select_tweak_to_date">选择调整到日期</string>
     <string name="text_tweak_hint">请确认以下两个日期的课程信息，点击右上角保存即可完成调课。</string>
     <string name="title_tweak_from_course">被调整的课程</string>
     <string name="a11y_arrow">箭头</string>

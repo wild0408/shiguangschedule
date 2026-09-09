@@ -26,10 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.window.Dialog
 import com.xingheyuzhuan.shiguangschedule.data.db.main.TimeSlot
 import com.xingheyuzhuan.shiguangschedule.ui.components.NativeNumberPicker
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -58,6 +62,22 @@ fun CourseTimePickerBottomSheet(
     var tempEndSection by remember { mutableIntStateOf(endSection) }
 
     val timeInvalidText = stringResource(Res.string.toast_time_invalid)
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.title_select_time), onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CoursePickerColumn(stringResource(Res.string.label_day_of_week), Modifier.weight(1f)) { DayPicker(tempSelectedDay, { tempSelectedDay = it }) }
+                    CoursePickerColumn(stringResource(Res.string.label_start_section), Modifier.weight(1f)) { SectionPicker(tempStartSection, { tempStartSection = it; if (it > tempEndSection) tempEndSection = it }, timeSlots) }
+                    CoursePickerColumn(stringResource(Res.string.label_end_section), Modifier.weight(1f)) { SectionPicker(tempEndSection, { tempEndSection = it }, timeSlots) }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), { if (tempStartSection > tempEndSection) ToastManager.show(timeInvalidText) else { onDaySelected(tempSelectedDay); onStartSectionChange(tempStartSection); onEndSectionChange(tempEndSection); onDismissRequest() } }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -158,6 +178,21 @@ fun CustomTimeRangePickerBottomSheet(
 
     val hours = remember { (0..23).map { it.toString().padStart(2, '0') } }
     val minutes = remember { (0..59).map { it.toString().padStart(2, '0') } }
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = titleText, onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CoursePickerColumn(startTimeLabel, Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { NativeNumberPicker(hours, sH.toString().padStart(2, '0'), { sH = it.toInt() }, Modifier.weight(1f)); top.yukonga.miuix.kmp.basic.Text(":"); NativeNumberPicker(minutes, sM.toString().padStart(2, '0'), { sM = it.toInt() }, Modifier.weight(1f)) } }
+                    CoursePickerColumn(endTimeLabel, Modifier.weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { NativeNumberPicker(hours, eH.toString().padStart(2, '0'), { eH = it.toInt() }, Modifier.weight(1f)); top.yukonga.miuix.kmp.basic.Text(":"); NativeNumberPicker(minutes, eM.toString().padStart(2, '0'), { eM = it.toInt() }, Modifier.weight(1f)) } }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(confirmText, { val start = sH * 60 + sM; val end = eH * 60 + eM; if (start >= end) ToastManager.show(endTimeInvalidText) else { onTimeRangeSelected("${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}", "${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}"); onDismissRequest() } }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -282,6 +317,18 @@ fun DayPickerDialog(
 ) {
     var tempSelectedDay by remember { mutableIntStateOf(selectedDay) }
 
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.label_day_of_week), onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DayPicker(tempSelectedDay, { tempSelectedDay = it }, Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismissRequest, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), { onDaySelected(tempSelectedDay); onDismissRequest() }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -342,4 +389,13 @@ fun SectionPicker(
         },
         modifier = modifier
     )
+}
+
+@Composable
+private fun CoursePickerColumn(title: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        top.yukonga.miuix.kmp.basic.Text(title, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        Spacer(Modifier.height(8.dp))
+        content()
+    }
 }

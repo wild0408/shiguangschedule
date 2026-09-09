@@ -62,6 +62,7 @@ kotlin {
                 implementation(libs.compose.ui.tooling.preview)
                 implementation(libs.miuix.ui)
                 implementation(libs.miuix.icons)
+                implementation(libs.miuix.preference)
 
                 // Dynamic Color 主题生成 (MaterialKolor)
                 implementation(libs.material.kolor)

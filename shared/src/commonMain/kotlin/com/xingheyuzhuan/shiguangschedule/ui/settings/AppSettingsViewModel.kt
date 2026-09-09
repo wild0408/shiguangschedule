@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseTableConfig
 import com.xingheyuzhuan.shiguangschedule.data.model.AppSettingsModel
 import com.xingheyuzhuan.shiguangschedule.data.model.AppThemeMode
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.data.model.StartScreen
 import com.xingheyuzhuan.shiguangschedule.data.repository.AppSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -175,6 +176,12 @@ class SettingsViewModel(
             val currentSettings = uiState.value.appSettings
             val updatedSettings = currentSettings.copy(themeMode = newMode)
             appSettingsRepository.insertOrUpdateAppSettings(updatedSettings)
+        }
+    }
+
+    fun onUiStyleChanged(style: AppUiStyle) {
+        viewModelScope.launch {
+            appSettingsRepository.insertOrUpdateAppSettings(uiState.value.appSettings.copy(uiStyle = style))
         }
     }
 

@@ -34,9 +34,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseWithWeeks
 import com.xingheyuzhuan.shiguangschedule.data.model.DualColor
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.navigation.AddEditCourseChannel
 import com.xingheyuzhuan.shiguangschedule.navigation.PresetCourseData
 import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalIsDarkTheme
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.miuixCourseTextColor
+import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.resolveCourseColor
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
@@ -79,6 +84,7 @@ fun CourseInstanceListScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
     val courseInstances by viewModel.courseInstances.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedCourseIds by viewModel.selectedCourseIds.collectAsState()
@@ -103,7 +109,13 @@ fun CourseInstanceListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = if (isSelectionMode) stringResource(Res.string.title_selected_items_count, selectedCourseIds.size) else courseName,
+                largeTitle = if (isSelectionMode) stringResource(Res.string.title_selected_items_count, selectedCourseIds.size) else courseName,
+                color = MiuixTheme.colorScheme.surface,
+                defaultWindowInsetsPadding = true,
+                navigationIcon = { top.yukonga.miuix.kmp.basic.IconButton(if (isSelectionMode) viewModel::toggleSelectionMode else onNavigateBack) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(if (isSelectionMode) Res.drawable.close_24px else Res.drawable.arrow_back_24px), null, tint = MiuixTheme.colorScheme.onSurface) } }
+            ) else TopAppBar(
                 title = {
                     Text(
                         if (isSelectionMode) {
@@ -151,7 +163,9 @@ fun CourseInstanceListScreen(
         },
         floatingActionButton = {
             if (!isSelectionMode) {
-                FloatingActionButton(onClick = onNavigateToAddNewCourse) {
+                if (useMiuix) top.yukonga.miuix.kmp.basic.FloatingActionButton(onClick = onNavigateToAddNewCourse) {
+                    top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.add_24px), stringResource(Res.string.action_add), tint = MiuixTheme.colorScheme.onPrimary)
+                } else FloatingActionButton(onClick = onNavigateToAddNewCourse) {
                     Icon(vectorResource(Res.drawable.add_24px), contentDescription = stringResource(Res.string.action_add))
                 }
             }
@@ -202,15 +216,9 @@ fun CourseInstanceCard(
 
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // 如果索引不存在，则取列表第一项；如果列表为空，则使用 MaterialTheme 的 SurfaceVariant 颜色兜底
-    val fallbackColor = DualColor(
-        light = MaterialTheme.colorScheme.surfaceVariant,
-        dark = MaterialTheme.colorScheme.surfaceVariant
-    )
-    val courseColorDual = colorMaps.getOrNull(course.colorInt) ?: colorMaps.firstOrNull() ?: fallbackColor
-
-    // 根据主题获取课程背景色
-    val courseBackgroundColor = if (isDarkTheme) courseColorDual.dark else courseColorDual.light
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val courseBackgroundColor = resolveCourseColor(course.colorInt, colorMaps, isDarkTheme, useMiuix)
+    val miuixTextColor = miuixCourseTextColor(courseBackgroundColor, isDarkTheme)
 
     val weekDays = stringArrayResource(Res.array.week_days_full_names)
     val dayName = weekDays.getOrElse(course.day - 1) { "?" }
@@ -221,7 +229,24 @@ fun CourseInstanceCard(
         contentColor = MaterialTheme.colorScheme.onSurface
     )
 
-    Card(
+    if (useMiuix) top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.height(IntrinsicSize.Max).combinedClickable(onClick = { onCourseClick(courseId) }, onLongClick = { onCourseLongClick(courseId) }),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+            color = courseBackgroundColor.copy(alpha = 0.22f),
+            contentColor = miuixTextColor
+        )
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            top.yukonga.miuix.kmp.basic.Text(course.teacher, style = MiuixTheme.textStyles.footnote1, color = miuixTextColor)
+            Spacer(Modifier.height(4.dp))
+            top.yukonga.miuix.kmp.basic.Text(course.position, style = MiuixTheme.textStyles.body2, color = miuixTextColor.copy(alpha = 0.82f))
+            Spacer(Modifier.height(8.dp))
+            val timeText = if (course.isCustomTime) stringResource(Res.string.course_time_day_time_details_tweak, dayName, course.customStartTime ?: "?", course.customEndTime ?: "?") else stringResource(Res.string.course_time_day_section_details_tweak, dayName, course.startSection ?: "?", course.endSection ?: "?")
+            top.yukonga.miuix.kmp.basic.Text(timeText, style = MiuixTheme.textStyles.body2, color = miuixTextColor)
+            val formattedWeeks = courseWithWeeks.weeks.map { it.weekNumber }.joinToString(", ")
+            top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_weeks_format, formattedWeeks), style = MiuixTheme.textStyles.footnote1, color = miuixTextColor.copy(alpha = 0.72f), modifier = Modifier.padding(top = 4.dp))
+        }
+    } else Card(
         modifier = Modifier
             .height(IntrinsicSize.Max)
             .combinedClickable(

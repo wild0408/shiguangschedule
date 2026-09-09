@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
@@ -36,6 +38,19 @@ fun SettingListItem(
     showDivider: Boolean = true,
     trailingContent: @Composable (() -> Unit)? = null
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.BasicComponent(
+            modifier = Modifier.fillMaxWidth(),
+            title = title,
+            onClick = onClick,
+            startAction = { top.yukonga.miuix.kmp.basic.Icon(icon, null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary) },
+            endActions = {
+                if (trailingContent != null) trailingContent()
+                else top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.chevron_right_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions)
+            }
+        )
+        return
+    }
     ListItem(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,6 +82,17 @@ fun SettingListItem(
 
 @Composable
 fun AcknowledgmentContent() {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.favorite_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_special_thanks), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, fontWeight = FontWeight.Medium)
+            }
+            top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.text_acknowledgment_body), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
+        }
+        return
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()

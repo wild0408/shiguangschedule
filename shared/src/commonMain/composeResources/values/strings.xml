@@ -378,6 +378,8 @@
     <string name="action_select_table">选择课表</string>
     <string name="label_tweak_from_date">被调整日期</string>
     <string name="label_tweak_to_date">调整到日期</string>
+    <string name="dialog_title_select_tweak_from_date">选择被调整日期</string>
+    <string name="dialog_title_select_tweak_to_date">选择调整到日期</string>
     <string name="text_tweak_hint">请确认以下两个日期的课程信息，点击右上角保存即可完成调课。</string>
     <string name="title_tweak_from_course">被调整的课程</string>
     <string name="a11y_arrow">箭头</string>
@@ -392,6 +394,7 @@
     <string name="tweak_mode_merge">合并 (A + B)</string>
     <string name="tweak_mode_overwrite">覆盖 (A → B)</string>
     <string name="tweak_mode_exchange">交换 (A ↔ B)</string>
+    <string name="title_select_tweak_mode">选择调课方式</string>
     <string name="date_format_month_day">%1$d月%2$d日</string>
 
     <!-- 教务导入 -->
@@ -606,4 +609,7 @@
     <string name="action_edit_room">修改宿舍</string>
     <string name="action_clear_account">清除账号</string>
     <string name="title_recent_history">最近查询</string>
+    <string name="ui_style_label">界面风格</string>
+    <string name="ui_style_miuix">Miuix</string>
+    <string name="ui_style_material">Material</string>
 </resources>

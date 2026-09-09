@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +35,13 @@ import com.xingheyuzhuan.shiguangschedule.data.db.main.TimeSlot
 import com.xingheyuzhuan.shiguangschedule.data.model.schedule_style.BorderTypeProto
 import com.xingheyuzhuan.shiguangschedule.data.model.schedule_style.ScheduleModeProto
 import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalIsDarkTheme
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
+import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun CourseBlock(
@@ -42,22 +50,26 @@ fun CourseBlock(
     style: ScheduleGridStyleComposed,
     timeSlots: List<TimeSlot>,
     modifier: Modifier = Modifier,
-    isFloating: Boolean = false // 标记当前块是否处于长按选中/悬浮状态
+    isFloating: Boolean = false, // 标记当前块是否处于长按选中/悬浮状态
+    onClick: () -> Unit = {}
 ) {
     val course = courseWrapper.course
     val isDarkTheme = LocalIsDarkTheme.current
 
     // 颜色适配
-    val colorIndex = course.colorInt.takeIf { it in style.courseColorMaps.indices }
-    val courseColorAdapted: Color? = colorIndex?.let { index ->
-        val baseColorMap = style.courseColorMaps[index]
-        if (isDarkTheme) baseColorMap.dark else baseColorMap.light
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val baseCourseColor = resolveCourseColor(course.colorInt, style.courseColorMaps, isDarkTheme, useMiuix)
+    // NexioSchedule uses a soft translucent surface and keeps the label in the
+    // same hue family. The legacy default alpha is 1.0f, so it must not be used
+    // directly for the Miuix surface.
+    val currentAlpha = if (isFloating) 0.95f else if (useMiuix) {
+        (0.16f + style.courseBlockAlpha.coerceIn(0f, 1f) * 0.12f).coerceIn(0.12f, 0.32f)
+    } else {
+        style.courseBlockAlpha
     }
-    val fallbackColorAdapted: Color = if (isDarkTheme) style.courseColorMaps.first().dark else style.courseColorMaps.first().light
-
-    val currentAlpha = if (isFloating) 0.95f else style.courseBlockAlpha
-    val blockColor = (courseColorAdapted ?: fallbackColorAdapted).copy(alpha = currentAlpha)
-    val textColor = style.courseTextColor ?: MaterialTheme.colorScheme.onSurface
+    val blockColor = baseCourseColor.copy(alpha = currentAlpha)
+    val miuixTextColor = miuixCourseTextColor(baseCourseColor, isDarkTheme)
+    val textColor = style.courseTextColor ?: if (useMiuix) miuixTextColor else MaterialTheme.colorScheme.onSurface
 
     // 字体大小
     val s13 = (13 * style.fontScale).sp
@@ -90,12 +102,17 @@ fun CourseBlock(
     }
 
     // 边框样式配置
-    val borderColor = if (isFloating) Color(0xFF2196F3) else MaterialTheme.colorScheme.outline
+    val borderColor = if (isFloating) {
+        if (useMiuix) MiuixTheme.colorScheme.primary else Color(0xFF2196F3)
+    } else if (useMiuix) MiuixTheme.colorScheme.outline else MaterialTheme.colorScheme.outline
     val borderWidth = if (isFloating) 2.dp else 1.dp
     val borderAlpha = if (isFloating) 1.0f else style.courseBlockAlpha
     val shape = RoundedCornerShape(style.courseBlockCornerRadius)
 
-    val borderModifier = when (style.borderType) {
+    val borderModifier = if (useMiuix && !isFloating) {
+        // NexioSchedule 的 Miuix 课程卡片依靠色块和圆角区分，不额外绘制分割边框。
+        Modifier
+    } else when (style.borderType) {
         BorderTypeProto.BORDER_TYPE_SOLID -> {
             Modifier.border(borderWidth, borderColor.copy(alpha = borderAlpha), shape)
         }
@@ -126,75 +143,118 @@ fun CourseBlock(
         Modifier
     }
 
-    Box(
-        modifier = modifier
-            .then(floatingShadowModifier)
-            .fillMaxSize()
-            .then(borderModifier)
-            .clip(shape)
-            .background(color = blockColor)
-    ) {
-        // 课程文字内容容器
+    val content: @Composable () -> Unit = {
         Column(
-            modifier = Modifier.fillMaxSize().padding(style.courseBlockInnerPadding),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 6.dp),
             horizontalAlignment = horizontalAlignment,
             verticalArrangement = verticalArrangement
         ) {
-            if (timeTextToShow != null) {
-                Text(
-                    text = timeTextToShow,
-                    fontSize = s10,
-                    color = textColor.copy(alpha = 0.8f),
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = textAlign,
-                    style = TextStyle(lineHeight = 1.em)
-                )
-            }
-
             Text(
                 text = course.name,
-                fontSize = s13,
+                fontSize = (12.7f * style.fontScale).sp,
+                lineHeight = (14.2f * style.fontScale).sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
-                overflow = TextOverflow.Ellipsis,
                 textAlign = textAlign,
-                modifier = Modifier.weight(1f, fill = false),
-                style = TextStyle(lineHeight = 1.2.em)
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
-
-            if (!style.hideTeacher) {
-                val teacher = course.teacher
-                if (teacher.isNotBlank()) {
-                    Text(text = teacher, fontSize = s10, color = textColor, textAlign = textAlign, overflow = TextOverflow.Ellipsis, style = TextStyle(lineHeight = 1.em))
-                }
+            if (!style.hideLocation && course.position.isNotBlank()) {
+                Text(
+                    text = if (style.removeLocationAt) course.position else "@${course.position}",
+                    fontSize = s10,
+                    lineHeight = 12.sp,
+                    color = textColor.copy(alpha = 0.82f),
+                    textAlign = textAlign,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+            if (!style.hideTeacher && course.teacher.isNotBlank()) {
+                Text(
+                    text = course.teacher,
+                    fontSize = s10,
+                    lineHeight = 12.sp,
+                    color = textColor.copy(alpha = 0.82f),
+                    textAlign = textAlign,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
 
-            if (!style.hideLocation) {
-                val position = course.position
-                if (position.isNotBlank()) {
-                    val prefix = if (style.removeLocationAt) "" else "@"
-                    Text(text = "$prefix$position", fontSize = s10, color = textColor, textAlign = textAlign, overflow = TextOverflow.Ellipsis, style = TextStyle(lineHeight = 1.em))
+    if (useMiuix && !isFloating) {
+        Card(
+            modifier = modifier.fillMaxSize().clip(shape),
+            cornerRadius = style.courseBlockCornerRadius,
+            insideMargin = PaddingValues(0.dp),
+            pressFeedbackType = PressFeedbackType.Sink,
+            showIndication = true,
+            colors = CardDefaults.defaultColors(
+                color = blockColor,
+                contentColor = textColor
+            ),
+            onClick = onClick
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                content()
+                if (timeTextToShow != null && course.isCustomTime) {
+                    Text(
+                        text = timeTextToShow,
+                        fontSize = 8.sp,
+                        lineHeight = 10.sp,
+                        color = textColor.copy(alpha = 0.78f),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 4.dp)
+                            .background(textColor.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        maxLines = 1
+                    )
+                }
+                if (courseWrapper.weeks.size > 1) {
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).padding(5.dp).size(7.dp)
+                            .background(textColor.copy(alpha = 0.82f), CircleShape)
+                    )
+                }
+                if (isVisualDemoted) {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            (if (isDarkTheme) Color.Black else Color.White).copy(alpha = 0.42f)
+                        )
+                    )
                 }
             }
         }
-
-        // 当单课不是当前周时，进行干净的全局遮罩染色与虚化斜线绘制
-        if (isVisualDemoted && !isFloating) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color = (if (isDarkTheme) Color.Black else Color.White).copy(alpha = 0.618f))
-                    .drawBehind {
-                        val stripeWidth = 5.dp.toPx()
-                        val stripeColor = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.06f)
-                        val brush = Brush.linearGradient(
-                            0.0f to stripeColor, 0.45f to stripeColor,
-                            0.55f to Color.Transparent, 1.0f to Color.Transparent,
-                            start = Offset(0f, 0f), end = Offset(stripeWidth, stripeWidth), tileMode = TileMode.Repeated
-                        )
-                        drawRect(brush = brush)
-                    }
-            )
+    } else {
+        Box(
+            modifier = modifier
+                .then(floatingShadowModifier)
+                .fillMaxSize()
+                .then(borderModifier)
+                .clip(shape)
+                .background(color = blockColor)
+        ) {
+            content()
+            if (isVisualDemoted && !isFloating) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(color = (if (isDarkTheme) Color.Black else Color.White).copy(alpha = 0.618f))
+                        .drawBehind {
+                            val stripeWidth = 5.dp.toPx()
+                            val stripeColor = (if (isDarkTheme) Color.White else Color.Black).copy(alpha = 0.06f)
+                            val brush = Brush.linearGradient(
+                                0.0f to stripeColor, 0.45f to stripeColor,
+                                0.55f to Color.Transparent, 1.0f to Color.Transparent,
+                                start = Offset(0f, 0f), end = Offset(stripeWidth, stripeWidth), tileMode = TileMode.Repeated
+                            )
+                            drawRect(brush = brush)
+                        }
+                )
+            }
         }
     }
 }

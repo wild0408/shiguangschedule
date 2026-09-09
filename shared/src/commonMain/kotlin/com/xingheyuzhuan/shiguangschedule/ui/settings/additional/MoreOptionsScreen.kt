@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,8 +36,11 @@ import com.xingheyuzhuan.shiguangschedule.tool.UpdateChecker
 import com.xingheyuzhuan.shiguangschedule.tool.UpdatePlatform
 import com.xingheyuzhuan.shiguangschedule.tool.UpdateStatus
 import com.xingheyuzhuan.shiguangschedule.ui.settings.SettingsViewModel
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -83,6 +87,8 @@ fun MoreOptionsScreen(
     // 状态观察
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isDeveloperModeEnabled = uiState.appSettings.developerModeEnabled
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
 
     // 更新逻辑相关状态
     var updateStatus by remember { mutableStateOf<UpdateStatus>(UpdateStatus.Idle) }
@@ -105,18 +111,39 @@ fun MoreOptionsScreen(
     }
 
     Scaffold(
+        modifier = if (useMiuix) Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection) else Modifier,
+        containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(Res.string.title_more_options)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = vectorResource(Res.drawable.arrow_back_24px),
-                            contentDescription = stringResource(Res.string.a11y_back)
-                        )
+            if (useMiuix) {
+                top.yukonga.miuix.kmp.basic.TopAppBar(
+                    title = stringResource(Res.string.title_more_options),
+               largeTitle = stringResource(Res.string.title_more_options),
+               color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                    scrollBehavior = miuixScrollBehavior,
+                    navigationIcon = {
+                        top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                            top.yukonga.miuix.kmp.basic.Icon(
+                                painterResource(Res.drawable.arrow_back_24px),
+                           contentDescription = stringResource(Res.string.a11y_back)
+                           , tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    defaultWindowInsetsPadding = true,
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(text = stringResource(Res.string.title_more_options)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = vectorResource(Res.drawable.arrow_back_24px),
+                                contentDescription = stringResource(Res.string.a11y_back)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         Column(
@@ -138,21 +165,42 @@ fun MoreOptionsScreen(
                     onTriggerDeveloperMode = { viewModel.onDeveloperModeChanged(true) }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(Res.string.app_name),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-                Text(
-                    text = stringResource(Res.string.label_version_prefix, appVersionName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (useMiuix) {
+                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.app_name), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title2, fontWeight = FontWeight.Bold)
+                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_version_prefix, appVersionName), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                } else {
+                    Text(text = stringResource(Res.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text(text = stringResource(Res.string.label_version_prefix, appVersionName), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             // 设置列表卡片
-            Card(
+            val settingsContent: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+                DeveloperModeSettingItem(isDeveloperModeEnabled = isDeveloperModeEnabled, onDeveloperModeChanged = { viewModel.onDeveloperModeChanged(it) })
+                SettingListItem(icon = vectorResource(Res.drawable.update_24px), title = stringResource(Res.string.item_check_software_update), onClick = { showChannelDialog = true })
+                SettingListItem(icon = vectorResource(Res.drawable.language_24px), title = stringResource(Res.string.item_language_settings), onClick = { onNavigate(Destination.LanguageSettings) })
+                SettingListItem(icon = vectorResource(Res.drawable.palette_24px), title = stringResource(Res.string.theme_settings_title), onClick = { onNavigate(Destination.ThemeSettings) })
+                SettingListItem(
+                    icon = vectorResource(Res.drawable.home_24px),
+                    title = stringResource(Res.string.item_start_screen_settings),
+                    onClick = { showStartScreenDialog = true },
+                    trailingContent = {
+                        if (useMiuix) top.yukonga.miuix.kmp.basic.Text(stringResource(uiState.appSettings.startScreen.labelRes), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary)
+                        else Text(stringResource(uiState.appSettings.startScreen.labelRes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                )
+                SettingListItem(icon = vectorResource(Res.drawable.code_24px), title = stringResource(Res.string.item_github_repo), onClick = { uriHandler.openUri(GITHUB_REPO_URL) })
+                SettingListItem(icon = vectorResource(Res.drawable.list_alt_24px), title = stringResource(Res.string.item_open_source_licenses), onClick = { onNavigate(Destination.OpenSourceLicenses) })
+                SettingListItem(icon = vectorResource(Res.drawable.update_24px), title = stringResource(Res.string.item_update_repo), onClick = { onNavigate(Destination.UpdateRepo) })
+                SettingListItem(icon = vectorResource(Res.drawable.people_alt_24px), title = stringResource(Res.string.item_contributors), onClick = { onNavigate(Destination.ContributionList) }, showDivider = false)
+                AcknowledgmentContent()
+            }
+            if (useMiuix) top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                insideMargin = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
+                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer),
+                content = settingsContent
+            ) else Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
@@ -163,81 +211,7 @@ fun MoreOptionsScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-
-                    // 开发者模式设置项
-                    DeveloperModeSettingItem(
-                        isDeveloperModeEnabled = isDeveloperModeEnabled,
-                        onDeveloperModeChanged = { viewModel.onDeveloperModeChanged(it) }
-                    )
-
-                    // 检查更新
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.update_24px),
-                        title = stringResource(Res.string.item_check_software_update),
-                        onClick = { showChannelDialog = true }
-                    )
-
-                    // 语言切换 (导航至独立页面)
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.language_24px),
-                        title = stringResource(Res.string.item_language_settings),
-                        onClick = { onNavigate(Destination.LanguageSettings) }
-                    )
-
-                    // 主题设置
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.palette_24px),
-                        title = stringResource(Res.string.theme_settings_title),
-                        onClick = { onNavigate(Destination.ThemeSettings) }
-                    )
-
-                    // 启动页面设置
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.home_24px),
-                        title = stringResource(Res.string.item_start_screen_settings),
-                        onClick = { showStartScreenDialog = true },
-                        trailingContent = {
-                            Text(
-                                text = stringResource(uiState.appSettings.startScreen.labelRes),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    )
-
-                    // GitHub 仓库
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.code_24px),
-                        title = stringResource(Res.string.item_github_repo),
-                        onClick = { uriHandler.openUri(GITHUB_REPO_URL) }
-                    )
-
-                    // 开源许可证
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.list_alt_24px),
-                        title = stringResource(Res.string.item_open_source_licenses),
-                        onClick = { onNavigate(Destination.OpenSourceLicenses) }
-                    )
-
-                    // 更新适配仓库
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.update_24px),
-                        title = stringResource(Res.string.item_update_repo),
-                        onClick = { onNavigate(Destination.UpdateRepo) }
-                    )
-
-                    // 贡献者
-                    SettingListItem(
-                        icon = vectorResource(Res.drawable.people_alt_24px),
-                        title = stringResource(Res.string.item_contributors),
-                        onClick = { onNavigate(Destination.ContributionList) },
-                        showDivider = false
-                    )
-
-                    // 鸣谢内容
-                    AcknowledgmentContent()
-                }
+                Column(modifier = Modifier.fillMaxWidth(), content = settingsContent)
             }
             Spacer(modifier = Modifier.height(32.dp))
         }

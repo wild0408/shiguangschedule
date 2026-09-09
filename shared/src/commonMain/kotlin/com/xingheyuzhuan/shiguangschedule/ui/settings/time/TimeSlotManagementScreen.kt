@@ -48,12 +48,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.xingheyuzhuan.shiguangschedule.data.db.main.TimeSlot
 import com.xingheyuzhuan.shiguangschedule.ui.components.NativeNumberPicker
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalTime
 import org.jetbrains.compose.resources.stringResource
@@ -96,6 +99,7 @@ import shiguangschedule.shared.generated.resources.toast_slot_added_unsaved
 import shiguangschedule.shared.generated.resources.toast_slot_modified_unsaved
 import shiguangschedule.shared.generated.resources.toast_slot_removed_unsaved
 import shiguangschedule.shared.generated.resources.toast_time_conflict
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 时间段管理界面的 Compose UI。
@@ -111,6 +115,7 @@ fun TimeSlotManagementScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val uiState by timeSlotViewModel.timeSlotsUiState.collectAsState()
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     val localTimeSlots = remember {
         mutableStateListOf<TimeSlot>().apply { addAll(uiState.timeSlots.sortedBy { it.number }) }
@@ -172,8 +177,32 @@ fun TimeSlotManagementScreen(
     var editingTimeSlot by remember { mutableStateOf<TimeSlot?>(null) }
 
     Scaffold(
+        containerColor = if (useMiuix) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = titleTimeSlotManagement,
+                largeTitle = titleTimeSlotManagement,
+                color = MiuixTheme.colorScheme.surface,
+                defaultWindowInsetsPadding = true,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(handleBackPress) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), a11yBack, tint = MiuixTheme.colorScheme.onSurface)
+                    }
+                },
+                actions = {
+                    top.yukonga.miuix.kmp.basic.IconButton({ editingTimeSlot = null; showEditBottomSheet = true }) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.add_24px), a11yAddTimeSlot, tint = MiuixTheme.colorScheme.onSurface)
+                    }
+                    top.yukonga.miuix.kmp.basic.IconButton({
+                        coroutineScope.launch {
+                            val sortedAndNumberedSlots = localTimeSlots.sortedBy { parseLocalTimeSafely(it.startTime) }.mapIndexed { index, slot -> slot.copy(number = index + 1) }
+                            timeSlotViewModel.onSaveAllSettings(sortedAndNumberedSlots, localDefaultClassDuration, localDefaultBreakDuration) { ToastManager.show(toastSettingsSaved) }
+                        }
+                    }) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.save_24px), a11ySaveAllSettings, tint = MiuixTheme.colorScheme.onSurface)
+                    }
+                }
+            ) else TopAppBar(
                 title = { Text(titleTimeSlotManagement) },
                 navigationIcon = {
                     IconButton(onClick = handleBackPress) {
@@ -217,15 +246,11 @@ fun TimeSlotManagementScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                HorizontalDivider()
-                DefaultDurationSettings(
-                    defaultClassDuration = localDefaultClassDuration,
-                    onClassDurationChange = { newValue -> localDefaultClassDuration = newValue },
-                    defaultBreakDuration = localDefaultBreakDuration,
-                    onBreakDurationChange = { newValue -> localDefaultBreakDuration = newValue }
-                )
+                if (!useMiuix) HorizontalDivider()
+                if (useMiuix) MiuixDefaultDurationSettings(localDefaultClassDuration, { localDefaultClassDuration = it }, localDefaultBreakDuration, { localDefaultBreakDuration = it })
+                else DefaultDurationSettings(localDefaultClassDuration, { localDefaultClassDuration = it }, localDefaultBreakDuration, { localDefaultBreakDuration = it })
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider()
+                if (!useMiuix) HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 if (localTimeSlots.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -235,7 +260,16 @@ fun TimeSlotManagementScreen(
             }
 
             itemsIndexed(localTimeSlots, key = { _, slot -> "${slot.number}-${slot.startTime}" }) { _, timeSlot ->
-                TimeSlotItem(
+                if (useMiuix) MiuixTimeSlotItem(
+                    timeSlot = timeSlot,
+                    onEditClick = { editingTimeSlot = timeSlot; showEditBottomSheet = true },
+                    onDeleteClick = {
+                        localTimeSlots.removeAll { it.number == timeSlot.number }
+                        val renumbered = localTimeSlots.sortedBy { parseLocalTimeSafely(it.startTime) }.mapIndexed { i, slot -> slot.copy(number = i + 1) }
+                        localTimeSlots.clear(); localTimeSlots.addAll(renumbered)
+                        ToastManager.show(toastSlotRemovedUnsaved)
+                    }
+                ) else TimeSlotItem(
                     timeSlot = timeSlot,
                     onEditClick = {
                         editingTimeSlot = timeSlot
@@ -265,14 +299,8 @@ fun TimeSlotManagementScreen(
                 localDefaultClassDuration
             )
 
-            ModalBottomSheet(
-                onDismissRequest = {
-                    showEditBottomSheet = false
-                    editingTimeSlot = null
-                },
-                sheetState = sheetState
-            ) {
-                TimeSlotEditContent(
+            if (useMiuix) {
+                MiuixTimeSlotEditDialog(
                     existingTimeSlots = localTimeSlots.toList(),
                     initialNumber = editingTimeSlot?.number ?: (localTimeSlots.maxOfOrNull { it.number }?.plus(1) ?: 1),
                     initialStartTime = initialStart,
@@ -309,11 +337,69 @@ fun TimeSlotManagementScreen(
                         editingTimeSlot = null
                     }
                 )
+            } else ModalBottomSheet(
+                onDismissRequest = {
+                    showEditBottomSheet = false
+                    editingTimeSlot = null
+                },
+                sheetState = sheetState
+            ) {
+                TimeSlotEditContent(
+                    existingTimeSlots = localTimeSlots.toList(),
+                    initialNumber = editingTimeSlot?.number ?: (localTimeSlots.maxOfOrNull { it.number }?.plus(1) ?: 1),
+                    initialStartTime = initialStart,
+                    initialEndTime = initialEnd,
+                    initialAlias = editingTimeSlot?.alias,
+                    isEditing = isEditing,
+                    onDismiss = {
+                        showEditBottomSheet = false
+                        editingTimeSlot = null
+                    },
+                    onConfirm = { number, startTime, endTime, alias ->
+                        val newOrUpdatedSlot = TimeSlot(number, startTime, endTime, courseTableId = "", alias = alias)
+                        val updatedList = localTimeSlots.toMutableList()
+                        if (isEditing) {
+                            val targetIdx = updatedList.indexOfFirst { it.number == number }
+                            if (targetIdx != -1) {
+                                updatedList[targetIdx] = newOrUpdatedSlot
+                                ToastManager.show(toastSlotModifiedUnsaved)
+                            }
+                        } else {
+                            updatedList.add(newOrUpdatedSlot)
+                            ToastManager.show(toastSlotAddedUnsaved)
+                        }
+                        val finalSorted = updatedList.sortedBy { parseLocalTimeSafely(it.startTime) }.mapIndexed { i, slot -> slot.copy(number = i + 1) }
+                        localTimeSlots.clear()
+                        localTimeSlots.addAll(finalSorted)
+                        showEditBottomSheet = false
+                        editingTimeSlot = null
+                    }
+                )
             }
         }
 
         if (showExitConfirmDialog) {
-            AlertDialog(
+            if (useMiuix) top.yukonga.miuix.kmp.window.WindowDialog(
+                show = true,
+                title = stringResource(Res.string.common_dialog_title_abandon_changes),
+                summary = stringResource(Res.string.common_dialog_msg_unsaved_changes),
+                onDismissRequest = { showExitConfirmDialog = false },
+                insideMargin = DpSize(16.dp, 16.dp)
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        stringResource(Res.string.common_action_continue_editing),
+                        { showExitConfirmDialog = false },
+                        Modifier.weight(1f)
+                    )
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        stringResource(Res.string.common_action_exit_without_save),
+                        { showExitConfirmDialog = false; onBack() },
+                        Modifier.weight(1f),
+                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = MiuixTheme.colorScheme.error)
+                    )
+                }
+            } else AlertDialog(
                 onDismissRequest = { showExitConfirmDialog = false },
                 title = { Text(text = stringResource(Res.string.common_dialog_title_abandon_changes)) },
                 text = { Text(text = stringResource(Res.string.common_dialog_msg_unsaved_changes)) },
@@ -758,4 +844,119 @@ private fun LocalTime.addMinutes(minutes: Int): LocalTime {
     val totalMinutes = this.hour * 60 + this.minute + minutes
     val newTotalMinutes = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60)
     return LocalTime(newTotalMinutes / 60, newTotalMinutes % 60)
+}
+
+@Composable
+private fun MiuixDefaultDurationSettings(
+    defaultClassDuration: Int,
+    onClassDurationChange: (Int) -> Unit,
+    defaultBreakDuration: Int,
+    onBreakDurationChange: (Int) -> Unit
+) {
+    val classLabel = stringResource(Res.string.label_class_duration_minutes)
+    val breakLabel = stringResource(Res.string.label_break_duration_minutes)
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.title_default_duration_settings))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            top.yukonga.miuix.kmp.basic.TextField(
+                value = if (defaultClassDuration == 0) "" else defaultClassDuration.toString(),
+                onValueChange = { it.toIntOrNull()?.takeIf { value -> value > 0 }?.let(onClassDurationChange) },
+                modifier = Modifier.weight(1f), label = classLabel, singleLine = true
+            )
+            top.yukonga.miuix.kmp.basic.TextField(
+                value = if (defaultBreakDuration < 0) "" else defaultBreakDuration.toString(),
+                onValueChange = { if (it.isEmpty()) onBreakDurationChange(-1) else it.toIntOrNull()?.takeIf { value -> value >= 0 }?.let(onBreakDurationChange) },
+                modifier = Modifier.weight(1f), label = breakLabel, singleLine = true
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiuixTimeSlotItem(
+    timeSlot: TimeSlot,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
+        onClick = onEditClick
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.time_slot_section_number, timeSlot.number.toString()), style = MiuixTheme.textStyles.body1)
+                timeSlot.alias?.takeIf { it.isNotBlank() }?.let { top.yukonga.miuix.kmp.basic.Text(it, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
+            top.yukonga.miuix.kmp.basic.Text("${timeSlot.startTime} - ${timeSlot.endTime}", style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            top.yukonga.miuix.kmp.basic.IconButton(onDeleteClick) {
+                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), stringResource(Res.string.a11y_delete_time_slot), tint = MiuixTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixTimeSlotEditDialog(
+    existingTimeSlots: List<TimeSlot>,
+    initialNumber: Int,
+    initialStartTime: String,
+    initialEndTime: String,
+    initialAlias: String?,
+    isEditing: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, String, String, String?) -> Unit
+) {
+    val (sh, sm) = parseTimeString(initialStartTime)
+    val (eh, em) = parseTimeString(initialEndTime)
+    var startHour by remember(initialStartTime) { mutableIntStateOf(sh) }
+    var startMinute by remember(initialStartTime) { mutableIntStateOf(sm) }
+    var endHour by remember(initialEndTime) { mutableIntStateOf(eh) }
+    var endMinute by remember(initialEndTime) { mutableIntStateOf(em) }
+    var alias by remember(initialAlias) { mutableStateOf(initialAlias.orEmpty()) }
+    val minTime = remember(existingTimeSlots, initialNumber, isEditing) {
+        val prev = existingTimeSlots.find { it.number == if (isEditing) initialNumber - 1 else existingTimeSlots.maxOfOrNull { slot -> slot.number } }
+        prev?.let { parseLocalTimeSafely(it.endTime) } ?: LocalTime(0, 0)
+    }
+    val maxTime = remember(existingTimeSlots, initialNumber, isEditing) {
+        val next = if (isEditing) existingTimeSlots.find { it.number == initialNumber + 1 } else null
+        next?.let { parseLocalTimeSafely(it.startTime) } ?: LocalTime(23, 59)
+    }
+    val startValues = remember { (0..23).map(::formatTwoDigits) }
+    val minuteValues = remember { (0..59).map(::formatTwoDigits) }
+    val start = LocalTime(startHour, startMinute)
+    val end = LocalTime(endHour, endMinute)
+    val title = stringResource(if (isEditing) Res.string.dialog_title_edit_time_slot else Res.string.dialog_title_add_time_slot)
+    val confirmText = stringResource(if (isEditing) Res.string.action_save_changes else Res.string.action_add)
+    val toastEndTimeMustBeLater = stringResource(Res.string.toast_end_time_must_be_later)
+    val toastTimeConflict = stringResource(Res.string.toast_time_conflict)
+
+    top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = title, insideMargin = DpSize(16.dp, 16.dp)) {
+        top.yukonga.miuix.kmp.basic.Card(
+            modifier = Modifier.fillMaxWidth(0.96f),
+            colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer)
+        ) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            top.yukonga.miuix.kmp.basic.TextField(alias, { if (it.length <= 5) alias = it }, Modifier.fillMaxWidth(), label = stringResource(Res.string.label_time_slot_alias), singleLine = true)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                NativeNumberPicker(startValues, formatTwoDigits(startHour), { startHour = it.toInt() }, Modifier.weight(1f).height(150.dp))
+                top.yukonga.miuix.kmp.basic.Text(":", style = MiuixTheme.textStyles.title3)
+                NativeNumberPicker(minuteValues, formatTwoDigits(startMinute), { startMinute = it.toInt() }, Modifier.weight(1f).height(150.dp))
+                top.yukonga.miuix.kmp.basic.Text("-", style = MiuixTheme.textStyles.title3)
+                NativeNumberPicker(startValues, formatTwoDigits(endHour), { endHour = it.toInt() }, Modifier.weight(1f).height(150.dp))
+                top.yukonga.miuix.kmp.basic.Text(":", style = MiuixTheme.textStyles.title3)
+                NativeNumberPicker(minuteValues, formatTwoDigits(endMinute), { endMinute = it.toInt() }, Modifier.weight(1f).height(150.dp))
+            }
+            top.yukonga.miuix.kmp.basic.Text("${formatTime(start)} - ${formatTime(end)}", style = MiuixTheme.textStyles.title3, modifier = Modifier.align(Alignment.CenterHorizontally))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+                top.yukonga.miuix.kmp.basic.TextButton(confirmText, {
+                    if (end <= start) ToastManager.show(toastEndTimeMustBeLater)
+                    else if (start < minTime || end > maxTime) ToastManager.show(toastTimeConflict)
+                    else onConfirm(initialNumber, formatTime(start), formatTime(end), alias.ifBlank { null })
+                }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+            }
+        }
+    }
+    }
 }

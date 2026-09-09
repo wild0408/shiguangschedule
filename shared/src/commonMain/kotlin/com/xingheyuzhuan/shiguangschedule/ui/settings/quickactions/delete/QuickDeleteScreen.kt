@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -53,13 +54,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseWithWeeks
+import com.xingheyuzhuan.shiguangschedule.ui.components.NativeNumberPicker
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.number
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -95,6 +105,7 @@ import shiguangschedule.shared.generated.resources.title_current_week
 import shiguangschedule.shared.generated.resources.title_select_weeks
 import shiguangschedule.shared.generated.resources.week_days_full_names
 import kotlin.time.Instant
+import kotlin.time.Clock
 
 /**
  * 将 UiTextRes 转化为 Composable 的字符串
@@ -114,6 +125,8 @@ fun QuickDeleteScreen(
     viewModel: QuickDeleteViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
     val weekDays = stringArrayResource(Res.array.week_days_full_names)
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -141,9 +154,22 @@ fun QuickDeleteScreen(
     }
 
     Scaffold(
+        modifier = if (useMiuix) Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection) else Modifier,
+        containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
+            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = stringResource(Res.string.item_quick_delete),
+                largeTitle = stringResource(Res.string.item_quick_delete),
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                scrollBehavior = miuixScrollBehavior,
+                defaultWindowInsetsPadding = true,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
+                    }
+                }
+            ) else TopAppBar(
                 title = { Text(stringResource(Res.string.item_quick_delete)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -155,7 +181,9 @@ fun QuickDeleteScreen(
         bottomBar = {
             // 仅当有选中的课程受到影响时显示删除按钮
             if (uiState.affectedCourses.isNotEmpty()) {
-                Surface(tonalElevation = 8.dp, shadowElevation = 8.dp) {
+                if (useMiuix) top.yukonga.miuix.kmp.basic.Card(Modifier.fillMaxWidth()) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.confirm_delete), { showConfirmDialog = true }, Modifier.fillMaxWidth(), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error))
+                } else Surface(tonalElevation = 8.dp, shadowElevation = 8.dp) {
                     Button(
                         onClick = { showConfirmDialog = true }, // 点击后弹出确认弹窗
                         modifier = Modifier
@@ -181,46 +209,46 @@ fun QuickDeleteScreen(
             // 维度一：周次和星期筛选卡片
             item {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.label_dimension_weeks_days),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                OutlinedCard(
-                    onClick = { showFilterSheet = true },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                if (useMiuix) {
+                    top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.label_dimension_weeks_days))
+                    top.yukonga.miuix.kmp.basic.Card(
+                        modifier = Modifier.fillMaxWidth().clickable { showFilterSheet = true },
+                        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
                     ) {
-                        Icon(vectorResource(Res.drawable.filter_list_24px), null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            if (uiState.selectedWeeks.isEmpty() || uiState.selectedDays.isEmpty()) {
-                                Text(
-                                    text = stringResource(Res.string.quick_delete_filter_weeks_days_hint),
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                            } else {
-                                val weeksContent = uiState.selectedWeeks.sorted().joinToString(", ")
-                                Text(
-                                    text = stringResource(Res.string.label_weeks_format, weeksContent),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                val daysContent = uiState.selectedDays.sorted().joinToString("、") { weekDays[it - 1] }
-                                Text(
-                                    text = stringResource(Res.string.quick_delete_label_days_prefix, daysContent),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
+                        Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.filter_list_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                if (uiState.selectedWeeks.isEmpty() || uiState.selectedDays.isEmpty()) {
+                                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.quick_delete_filter_weeks_days_hint), color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                } else {
+                                    val weeksContent = uiState.selectedWeeks.sorted().joinToString(", ")
+                                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_weeks_format, weeksContent), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
+                                    val daysContent = uiState.selectedDays.sorted().joinToString("、") { weekDays[it - 1] }
+                                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.quick_delete_label_days_prefix, daysContent), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                }
+                            }
+                            if (uiState.selectedWeeks.isNotEmpty() || uiState.selectedDays.isNotEmpty()) {
+                                top.yukonga.miuix.kmp.basic.IconButton({ viewModel.clearWeeksAndDays() }) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.close_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions) }
                             }
                         }
-                        // 如果有选择内容，显示清除图标
-                        if (uiState.selectedWeeks.isNotEmpty() || uiState.selectedDays.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.clearWeeksAndDays() }, modifier = Modifier.size(24.dp)) {
-                                Icon(vectorResource(Res.drawable.close_24px), null, modifier = Modifier.size(16.dp))
+                    }
+                } else {
+                    Text(text = stringResource(Res.string.label_dimension_weeks_days), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    OutlinedCard(onClick = { showFilterSheet = true }, modifier = Modifier.padding(vertical = 8.dp)) {
+                        Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(vectorResource(Res.drawable.filter_list_24px), null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                if (uiState.selectedWeeks.isEmpty() || uiState.selectedDays.isEmpty()) Text(stringResource(Res.string.quick_delete_filter_weeks_days_hint), color = MaterialTheme.colorScheme.outline)
+                                else {
+                                    val weeksContent = uiState.selectedWeeks.sorted().joinToString(", ")
+                                    Text(stringResource(Res.string.label_weeks_format, weeksContent), style = MaterialTheme.typography.bodyMedium)
+                                    val daysContent = uiState.selectedDays.sorted().joinToString("、") { weekDays[it - 1] }
+                                    Text(stringResource(Res.string.quick_delete_label_days_prefix, daysContent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                }
                             }
+                            if (uiState.selectedWeeks.isNotEmpty() || uiState.selectedDays.isNotEmpty()) IconButton(onClick = { viewModel.clearWeeksAndDays() }, modifier = Modifier.size(24.dp)) { Icon(vectorResource(Res.drawable.close_24px), null, modifier = Modifier.size(16.dp)) }
                         }
                     }
                 }
@@ -228,47 +256,41 @@ fun QuickDeleteScreen(
 
             // 维度二：具体日期范围筛选卡片
             item {
-                Text(
-                    text = stringResource(Res.string.label_dimension_dates),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                OutlinedCard(
-                    onClick = { showDateRangePicker = true },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                ) {
+                if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.label_dimension_dates)) else Text(text = stringResource(Res.string.label_dimension_dates), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                val dateCardContent: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(vectorResource(Res.drawable.calendar_today_24px), null, tint = MaterialTheme.colorScheme.primary)
+                        if (useMiuix) top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.calendar_today_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary) else Icon(vectorResource(Res.drawable.calendar_today_24px), null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(12.dp))
                         val dateText = if (uiState.startDate != null && uiState.endDate != null) {
                             "${uiState.startDate} ~ ${uiState.endDate}"
                         } else {
                             stringResource(Res.string.quick_delete_filter_date_range_hint)
                         }
-                        Text(
-                            text = dateText,
-                            modifier = Modifier.weight(1f),
-                            color = if (uiState.startDate != null) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.outline
-                        )
+                        if (useMiuix) top.yukonga.miuix.kmp.basic.Text(dateText, Modifier.weight(1f), color = if (uiState.startDate != null) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary) else Text(dateText, Modifier.weight(1f), color = if (uiState.startDate != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline)
                         if (uiState.startDate != null) {
-                            IconButton(onClick = { viewModel.clearDateRange() }, modifier = Modifier.size(24.dp)) {
-                                Icon(vectorResource(Res.drawable.close_24px), null, modifier = Modifier.size(16.dp))
-                            }
+                            if (useMiuix) top.yukonga.miuix.kmp.basic.IconButton({ viewModel.clearDateRange() }) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.close_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions) }
+                            else IconButton(onClick = { viewModel.clearDateRange() }, modifier = Modifier.size(24.dp)) { Icon(vectorResource(Res.drawable.close_24px), null, modifier = Modifier.size(16.dp)) }
                         }
                     }
                 }
+                if (useMiuix) top.yukonga.miuix.kmp.basic.Card(Modifier.fillMaxWidth().clickable { showDateRangePicker = true }, colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer), content = dateCardContent)
+                else OutlinedCard(onClick = { showDateRangePicker = true }, modifier = Modifier.padding(vertical = 8.dp), content = dateCardContent)
             }
 
             // 预览状态提示：显示受影响的记录条数
             item {
                 val count = uiState.affectedCourses.size
-                Text(
-                    text = if (count > 0) stringResource(Res.string.hint_affected_count, count)
-                    else stringResource(Res.string.hint_no_selection),
+                if (useMiuix) top.yukonga.miuix.kmp.basic.Text(
+                    text = if (count > 0) stringResource(Res.string.hint_affected_count, count) else stringResource(Res.string.hint_no_selection),
+                    color = if (count > 0) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) else Text(
+                    text = if (count > 0) stringResource(Res.string.hint_affected_count, count) else stringResource(Res.string.hint_no_selection),
                     color = if (count > 0) MaterialTheme.colorScheme.error else Color.Gray,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
@@ -287,7 +309,12 @@ fun QuickDeleteScreen(
 
     // 二次确认对话框
     if (showConfirmDialog) {
-        AlertDialog(
+        if (useMiuix) top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.confirm_delete), summary = stringResource(Res.string.dialog_delete_confirm_msg), onDismissRequest = { showConfirmDialog = false }) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), { showConfirmDialog = false }, Modifier.weight(1f))
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), { showConfirmDialog = false; viewModel.executeDelete() }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error))
+            }
+        } else AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
             title = { Text(stringResource(Res.string.confirm_delete)) },
             text = { Text(stringResource(Res.string.dialog_delete_confirm_msg)) },
@@ -344,6 +371,33 @@ fun FilterBottomSheet(
     onDismiss: () -> Unit
 ) {
     val weekDays = stringArrayResource(Res.array.week_days_full_names)
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.title_select_weeks), onDismissRequest = onDismiss, insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.title_select_weeks), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..20).forEach { week ->
+                        top.yukonga.miuix.kmp.basic.Card(Modifier.size(42.dp).clickable { viewModel.toggleWeek(week) }, colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = if (week in uiState.selectedWeeks) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { top.yukonga.miuix.kmp.basic.Text(week.toString(), color = if (week in uiState.selectedWeeks) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onPrimary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface) }
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.label_day_of_week), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3)
+                    top.yukonga.miuix.kmp.basic.TextButton(if (uiState.selectedDays.size == 7) stringResource(Res.string.action_deselect_all) else stringResource(Res.string.action_select_all), { if (uiState.selectedDays.size == 7) viewModel.clearAllDays() else viewModel.selectAllDays() })
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..7).forEach { day ->
+                        top.yukonga.miuix.kmp.basic.Card(Modifier.clickable { viewModel.toggleDay(day) }, colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = if (day in uiState.selectedDays) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)) {
+                            top.yukonga.miuix.kmp.basic.Text(weekDays[day - 1], Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = if (day in uiState.selectedDays) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onPrimary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
+                top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), onDismiss, Modifier.fillMaxWidth(), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+            }
+        }
+        return
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -428,6 +482,61 @@ fun DateRangePickerModal(
     onDismiss: () -> Unit,
     onConfirm: (LocalDate, LocalDate) -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val years = remember { (today.year - 5..today.year + 10).toList() }
+        val months = remember { (1..12).toList() }
+        val days = remember { (1..31).toList() }
+        var selectingEnd by remember { mutableStateOf(false) }
+        var startDate by remember { mutableStateOf<LocalDate?>(null) }
+        var startYear by remember { mutableStateOf(today.year) }
+        var startMonth by remember { mutableStateOf(today.month.number) }
+        var startDay by remember { mutableStateOf(today.day) }
+        var endYear by remember { mutableStateOf(today.year) }
+        var endMonth by remember { mutableStateOf(today.month.number) }
+        var endDay by remember { mutableStateOf(today.day) }
+        val year = if (selectingEnd) endYear else startYear
+        val month = if (selectingEnd) endMonth else startMonth
+        val day = if (selectingEnd) endDay else startDay
+        val chosenDate = runCatching { LocalDate(year, month, day) }.getOrNull()
+
+        top.yukonga.miuix.kmp.window.WindowDialog(
+            show = true,
+            title = stringResource(Res.string.quick_delete_dialog_select_date_title),
+            onDismissRequest = onDismiss,
+            insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)
+        ) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (startDate != null) top.yukonga.miuix.kmp.basic.Text(startDate.toString(), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NativeNumberPicker(years, year, { value -> if (selectingEnd) endYear = value else startYear = value }, Modifier.weight(1f).height(150.dp))
+                    NativeNumberPicker(months, month, { value -> if (selectingEnd) endMonth = value else startMonth = value }, Modifier.weight(1f).height(150.dp))
+                    NativeNumberPicker(days, day, { value -> if (selectingEnd) endDay = value else startDay = value }, Modifier.weight(1f).height(150.dp))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        stringResource(Res.string.action_confirm),
+                        {
+                            if (!selectingEnd) {
+                                startDate = chosenDate
+                                endYear = year
+                                endMonth = month
+                                endDay = day
+                                selectingEnd = true
+                            } else if (chosenDate != null && startDate != null) {
+                                onConfirm(startDate!!, chosenDate)
+                            }
+                        },
+                        Modifier.weight(1f),
+                        enabled = chosenDate != null && (!selectingEnd || startDate == null || chosenDate >= startDate!!),
+                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
+                    )
+                }
+            }
+        }
+        return
+    }
     val state = rememberDateRangePickerState()
 
     DatePickerDialog(
@@ -471,7 +580,26 @@ fun DeletePreviewCard(
 ) {
     val weekDays = stringArrayResource(Res.array.week_days_full_names)
     val course = courseWithWeeks.course
+    val weekText = stringResource(Res.string.title_current_week, targetWeek.toString())
+    val dayString = weekDays[course.day - 1]
+    val detailsText = if (course.isCustomTime) {
+        stringResource(Res.string.course_time_day_time_details_tweak, dayString, course.customStartTime ?: stringResource(Res.string.label_none), course.customEndTime ?: stringResource(Res.string.label_none))
+    } else {
+        stringResource(Res.string.course_time_day_section_details_tweak, dayString, (course.startSection ?: 0).toString(), (course.endSection ?: 0).toString())
+    }
 
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.Card(Modifier.fillMaxWidth(), colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.errorContainer.copy(alpha = 0.18f))) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    top.yukonga.miuix.kmp.basic.Text(course.name, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    top.yukonga.miuix.kmp.basic.Text("$weekText · $detailsText", style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                }
+                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error)
+            }
+        }
+        return
+    }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)),
         modifier = Modifier.fillMaxWidth(),
@@ -485,25 +613,6 @@ fun DeletePreviewCard(
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Bold
                 )
-
-                val weekText = stringResource(Res.string.title_current_week, targetWeek.toString())
-
-                val dayString = weekDays[course.day - 1]
-                val detailsText = if (course.isCustomTime) {
-                    stringResource(
-                        Res.string.course_time_day_time_details_tweak,
-                        dayString,
-                        course.customStartTime ?: stringResource(Res.string.label_none),
-                        course.customEndTime ?: stringResource(Res.string.label_none)
-                    )
-                } else {
-                    stringResource(
-                        Res.string.course_time_day_section_details_tweak,
-                        dayString,
-                        (course.startSection ?: 0).toString(),
-                        (course.endSection ?: 0).toString()
-                    )
-                }
 
                 Text(
                     text = "$weekText · $detailsText",

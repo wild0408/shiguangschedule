@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.tool.FileManagerCallbacks
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import com.xingheyuzhuan.shiguangschedule.tool.rememberFileManager
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -67,6 +70,7 @@ import shiguangschedule.shared.generated.resources.arrow_back_24px
 import shiguangschedule.shared.generated.resources.backup_target_local_zip
 import shiguangschedule.shared.generated.resources.backup_target_webdav
 import shiguangschedule.shared.generated.resources.cloud_24px
+import shiguangschedule.shared.generated.resources.chevron_right_24px
 import shiguangschedule.shared.generated.resources.desc_backup_data
 import shiguangschedule.shared.generated.resources.desc_restore_data
 import shiguangschedule.shared.generated.resources.desc_webdav_connected
@@ -110,6 +114,8 @@ fun BackupScreen(
     viewModel: BackupViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
+    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -165,8 +171,21 @@ fun BackupScreen(
     }
 
     Scaffold(
+        modifier = if (useMiuix) Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection) else Modifier,
+        containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
+                title = stringResource(Res.string.item_backup_restore),
+                largeTitle = stringResource(Res.string.item_backup_restore),
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
+                scrollBehavior = miuixScrollBehavior,
+                navigationIcon = {
+                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
+                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
+                    }
+                },
+                defaultWindowInsetsPadding = true,
+            ) else TopAppBar(
                 title = { Text(stringResource(Res.string.item_backup_restore)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -189,7 +208,8 @@ fun BackupScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             if (state.isBusy || state.isTesting) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                if (useMiuix) top.yukonga.miuix.kmp.basic.LinearProgressIndicator(Modifier.fillMaxWidth())
+                else LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             CardGroup(title = stringResource(Res.string.section_data_maintenance)) {
@@ -200,10 +220,7 @@ fun BackupScreen(
                     enabled = !state.isBusy,
                     onClick = { showBackupTargetDialog = true }
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                )
+                if (!useMiuix) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 MenuActionItem(
                     title = stringResource(Res.string.item_restore_data),
                     subtitle = stringResource(Res.string.desc_restore_data),
@@ -311,6 +328,19 @@ fun CardGroup(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            top.yukonga.miuix.kmp.basic.SmallTitle(title)
+            top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = PaddingValues(vertical = 4.dp),
+                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
+            ) {
+                Column(Modifier.fillMaxWidth(), content = content)
+            }
+        }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
@@ -342,6 +372,18 @@ fun MenuActionItem(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.basic.BasicComponent(
+            modifier = Modifier.fillMaxWidth(),
+            title = title,
+            summary = subtitle,
+            enabled = enabled,
+            onClick = onClick,
+            startAction = { top.yukonga.miuix.kmp.basic.Icon(icon, null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary) },
+            endActions = { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.chevron_right_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions) }
+        )
+        return
+    }
     ListItem(
         headlineContent = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) },
@@ -368,6 +410,24 @@ fun TargetSelectionDialog(
     onTargetSelected: (BackupTarget) -> Unit
 ) {
     var selectedTarget by remember { mutableStateOf(BackupTarget.entries.first()) }
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = title, onDismissRequest = onDismiss, insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                BackupTarget.entries.forEach { target ->
+                    top.yukonga.miuix.kmp.basic.BasicComponent(
+                        title = stringResource(target.stringRes),
+                        onClick = { selectedTarget = target },
+                        startAction = { top.yukonga.miuix.kmp.basic.RadioButton(selected = target == selectedTarget, onClick = { selectedTarget = target }) },
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), { onTargetSelected(selectedTarget) }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -426,6 +486,22 @@ fun WebDavConfigDialog(
     var inputUsername by remember { mutableStateOf(state.username) }
     var inputPassword by remember { mutableStateOf("") }
     var inputRootPath by remember { mutableStateOf(state.rootPath) }
+    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.dialog_title_config_webdav), onDismissRequest = onDismiss, insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                top.yukonga.miuix.kmp.basic.TextField(inputUrl, { inputUrl = it }, Modifier.fillMaxWidth(), label = stringResource(Res.string.label_webdav_url), singleLine = true)
+                top.yukonga.miuix.kmp.basic.TextField(inputUsername, { inputUsername = it }, Modifier.fillMaxWidth(), label = stringResource(Res.string.label_webdav_account), singleLine = true)
+                top.yukonga.miuix.kmp.basic.TextField(inputPassword, { inputPassword = it }, Modifier.fillMaxWidth(), label = if (state.hasSavedPassword) stringResource(Res.string.label_webdav_pwd_saved) else stringResource(Res.string.label_webdav_pwd_empty), visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                top.yukonga.miuix.kmp.basic.TextField(inputRootPath, { inputRootPath = it }, Modifier.fillMaxWidth(), label = stringResource(Res.string.label_webdav_path), singleLine = true)
+                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.desc_webdav_path_hint), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_reset), { onDisconnect(); onDismiss() }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error))
+                    top.yukonga.miuix.kmp.basic.TextButton(if (state.isTesting) stringResource(Res.string.title_loading) else stringResource(Res.string.action_confirm), { onSave(inputUrl, inputUsername, inputPassword, inputRootPath) }, Modifier.weight(1f), enabled = !state.isTesting, colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
+                }
+            }
+        }
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -379,6 +379,8 @@
     <string name="action_select_table">Select schedule</string>
     <string name="label_tweak_from_date">Original date</string>
     <string name="label_tweak_to_date">New date</string>
+    <string name="dialog_title_select_tweak_from_date">Select original date</string>
+    <string name="dialog_title_select_tweak_to_date">Select new date</string>
     <string name="text_tweak_hint">Please confirm the course information for both dates, then tap save to complete the adjustment.</string>
     <string name="title_tweak_from_course">Courses to move</string>
     <string name="a11y_arrow">Arrow</string>
