@@ -286,8 +286,6 @@ fun TimeColumn(
     textColor: Color,
     subTextColor: Color,
     strokeWidthPx: Float,
-    activeTextColor: Color = MaterialTheme.colorScheme.primary,
-    showActiveBackground: Boolean = true,
     activeDragHour: Int? = null,
     activeDragMinuteStr: String? = null
 ) {
@@ -312,13 +310,7 @@ fun TimeColumn(
                     .fillMaxWidth()
                     .height(style.sectionHeight)
                     .clickable { onTimeSlotClicked() }
-                    .background(
-                        if (isCurrentHourActive && showActiveBackground) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
-                        } else {
-                            Color.Transparent
-                        }
-                    )
+                    .background(if (isCurrentHourActive) MaterialTheme.colorScheme.primaryContainer.copy(0.4f) else Color.Transparent)
                     .drawBehind {
                         if (!style.hideGridLines) {
                             drawLine(lineColor, Offset(size.width, 0f), Offset(size.width, size.height), strokeWidthPx)
@@ -339,7 +331,7 @@ fun TimeColumn(
                             text = ":$activeDragMinuteStr",
                             fontSize = if (h < 32.dp) 11.sp else 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isCurrentHourActive) activeTextColor else textColor
+                            color = textColor
                         )
                     }
                 }
@@ -364,31 +356,20 @@ fun TimeColumn(
                         if (slot != null) {
                             Text(
                                 text = slot.alias ?: slot.number.toString(),
-                            fontSize = if (h < 32.dp) 11.sp else 14.sp,
-                            fontWeight = FontWeight.Bold,
-                                color = if (isCurrentHourActive) activeTextColor else textColor,
+                                fontSize = if (h < 32.dp) 11.sp else 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (!style.hideSectionTime) {
                                 when {
                                     h >= 52.dp -> {
                                         Spacer(Modifier.height(2.dp))
-                                        TimeText(
-                                            slot.startTime,
-                                            if (isCurrentHourActive) activeTextColor else subTextColor,
-                                        )
-                                        TimeText(
-                                            slot.endTime,
-                                            if (isCurrentHourActive) activeTextColor else subTextColor,
-                                        )
+                                        TimeText(slot.startTime, subTextColor)
+                                        TimeText(slot.endTime, subTextColor)
                                     }
                                     h >= 38.dp -> {
-                                        Text(
-                                            text = "${slot.startTime}-${slot.endTime}",
-                                            fontSize = 8.sp,
-                                            color = if (isCurrentHourActive) activeTextColor else subTextColor,
-                                            maxLines = 1,
-                                        )
+                                        Text(text = "${slot.startTime}-${slot.endTime}", fontSize = 8.sp, color = subTextColor, maxLines = 1)
                                     }
                                 }
                             }
