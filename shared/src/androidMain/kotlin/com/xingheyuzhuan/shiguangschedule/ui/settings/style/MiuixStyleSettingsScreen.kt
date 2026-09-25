@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -49,9 +52,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.xingheyuzhuan.shiguangschedule.tool.FileManagerCallbacks
 import com.xingheyuzhuan.shiguangschedule.tool.rememberFileManager
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdvancedColorPicker
 import com.xingheyuzhuan.shiguangschedule.ui.components.ColorPickerConfig
 import com.xingheyuzhuan.shiguangschedule.ui.components.ImageCropper
+import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -59,10 +64,13 @@ import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.a11y_back
 import shiguangschedule.shared.generated.resources.arrow_back_24px
 import shiguangschedule.shared.generated.resources.item_personalization
+import shiguangschedule.shared.generated.resources.title_dark_color_pool
+import shiguangschedule.shared.generated.resources.title_light_color_pool
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StyleSettingsScreen(
+internal fun MiuixStyleSettingsScreen(
     onBack: () -> Unit,
     viewModel: StyleSettingsViewModel = koinViewModel()
 ) {
@@ -84,6 +92,7 @@ fun StyleSettingsScreen(
     // 获取底部系统导航栏高度及 Card 背景颜色
     val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val cardContainerColor = CardDefaults.cardColors().containerColor
+    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     // 1. 对接全局统一的平台资源管理器
     val fileManager = rememberFileManager(
@@ -119,6 +128,101 @@ fun StyleSettingsScreen(
                 loadedBitmap = null
             }
         )
+    }
+
+    if (useMiuix) {
+        val currentStyle = styleState
+        if (currentStyle == null) {
+            Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+                top.yukonga.miuix.kmp.basic.CircularProgressIndicator()
+            }
+            return
+        }
+        val previewContent = @Composable { modifier: Modifier ->
+            Box(
+                modifier = modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                Box(Modifier.fillMaxWidth()) {
+                    MiuixStylePreview(currentStyle, demoUiState)
+                }
+            }
+        }
+
+        MiuixStyleSettingsScaffold(
+            title = stringResource(Res.string.item_personalization),
+            onBack = onBack,
+        ) { paddingValues ->
+            val contentModifier = Modifier.padding(paddingValues).fillMaxSize()
+            if (isLandscape) {
+                Row(contentModifier) {
+                    previewContent(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(0.44f)
+                            .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                    )
+                    Column(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(0.56f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        MiuixSettingsListContent(
+                            currentStyle,
+                            viewModel,
+                            { fileManager.pickImage() },
+                            modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
+                        ) { dark, index ->
+                            isDarkTarget = dark
+                            selectedColorIndex = index
+                            showColorPicker = true
+                        }
+                    }
+                }
+            } else {
+                Column(contentModifier) {
+                    previewContent(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                    )
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                        MiuixSettingsListContent(
+                            currentStyle,
+                            viewModel,
+                            { fileManager.pickImage() },
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        ) { dark, index ->
+                            isDarkTarget = dark
+                            selectedColorIndex = index
+                            showColorPicker = true
+                        }
+                    }
+                }
+            }
+
+            if (showColorPicker) {
+                val initialColor = currentStyle.courseColorMaps.getOrNull(selectedColorIndex)?.let { if (isDarkTarget) it.dark else it.light } ?: Color.Gray
+                top.yukonga.miuix.kmp.overlay.OverlayDialog(
+                    title = if (isDarkTarget) stringResource(Res.string.title_dark_color_pool) else stringResource(Res.string.title_light_color_pool),
+                    show = true,
+                    onDismissRequest = { showColorPicker = false },
+                ) {
+                    Column(Modifier.fillMaxWidth()) {
+                        AdvancedColorPicker(
+                            initialColor = initialColor,
+                            config = ColorPickerConfig(showAlpha = false),
+                            onColorChanged = { viewModel.updatePrimaryColor(selectedColorIndex, it, isDarkTarget) },
+                            previewContent = { ColorPreviewBox(initialColor, !isDarkTarget) }
+                        )
+                    }
+                }
+            }
+        }
+        return
     }
 
     Scaffold(

@@ -21,19 +21,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdaptiveNavigationScaffold
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.chevron_right_24px
 import shiguangschedule.shared.generated.resources.desc_grade_center
+import shiguangschedule.shared.generated.resources.desc_electricity
 import shiguangschedule.shared.generated.resources.item_grade_center
+import shiguangschedule.shared.generated.resources.item_electricity
+import shiguangschedule.shared.generated.resources.electricity_24px
 import shiguangschedule.shared.generated.resources.list_alt_24px
 import shiguangschedule.shared.generated.resources.nav_service
-import shiguangschedule.shared.generated.resources.item_electricity
-import shiguangschedule.shared.generated.resources.desc_electricity
-import shiguangschedule.shared.generated.resources.electricity_24px
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,31 +39,11 @@ fun ServiceScreen(
     onNavigate: (Destination) -> Unit,
     onBack: () -> Unit
 ) {
-    val miuix = LocalUiStyle.current == AppUiStyle.MIUIX
     AdaptiveNavigationScaffold(
         currentDestination = Destination.Service,
         onTabSelected = onNavigate
     ) { navigationPadding ->
-        if (miuix) {
-            top.yukonga.miuix.kmp.basic.Scaffold(
-                containerColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                topBar = {
-                    top.yukonga.miuix.kmp.basic.TopAppBar(
-                        title = stringResource(Res.string.nav_service),
-                        largeTitle = stringResource(Res.string.nav_service),
-                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                        defaultWindowInsetsPadding = true,
-                    )
-                },
-            ) { contentPadding ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 16.dp),
-                ) {
-                    item { MiuixServiceCard(onClick = { onNavigate(Destination.GradeCenter) }, icon = Res.drawable.list_alt_24px, title = stringResource(Res.string.item_grade_center), description = stringResource(Res.string.desc_grade_center)) }
-                    item { MiuixServiceCard(onClick = { onNavigate(Destination.ElectricityCenter) }, icon = Res.drawable.electricity_24px, title = stringResource(Res.string.item_electricity), description = stringResource(Res.string.desc_electricity)) }
-                }
-            }
-        } else Scaffold(
+        Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text(stringResource(Res.string.nav_service)) }
@@ -97,31 +75,23 @@ fun ServiceScreen(
                     }
                 }
                 item {
-                    Card(onClick = { onNavigate(Destination.ElectricityCenter) }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        RowContent(Res.drawable.electricity_24px, stringResource(Res.string.item_electricity), stringResource(Res.string.desc_electricity))
+                    Card(
+                        onClick = { onNavigate(Destination.ElectricityCenter) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        RowContent(
+                            icon = Res.drawable.electricity_24px,
+                            title = stringResource(Res.string.item_electricity),
+                            description = stringResource(Res.string.desc_electricity)
+                        )
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MiuixServiceCard(onClick: () -> Unit, icon: org.jetbrains.compose.resources.DrawableResource, title: String, description: String) {
-    top.yukonga.miuix.kmp.basic.Card(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        onClick = onClick,
-    ) {
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            top.yukonga.miuix.kmp.basic.Icon(vectorResource(icon), contentDescription = null, modifier = Modifier.size(30.dp), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary)
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
-                top.yukonga.miuix.kmp.basic.Text(title, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3)
-                top.yukonga.miuix.kmp.basic.Text(description, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            }
-            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.chevron_right_24px), contentDescription = null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions)
         }
     }
 }

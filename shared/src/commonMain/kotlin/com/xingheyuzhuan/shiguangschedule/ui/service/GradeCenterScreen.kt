@@ -30,27 +30,23 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.model.GradeRecord
 import com.xingheyuzhuan.shiguangschedule.data.model.GradeSemesterSummary
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.data.repository.GradeImportStore
 import com.xingheyuzhuan.shiguangschedule.data.repository.GradeRepository
-import kotlinx.coroutines.flow.map
-import org.koin.compose.koinInject
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdaptiveNavigationScaffold
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
+import org.koin.compose.koinInject
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
@@ -58,7 +54,6 @@ import shiguangschedule.shared.generated.resources.a11y_back
 import shiguangschedule.shared.generated.resources.action_import_grade
 import shiguangschedule.shared.generated.resources.arrow_back_24px
 import shiguangschedule.shared.generated.resources.chevron_right_24px
-import shiguangschedule.shared.generated.resources.check_24px
 import shiguangschedule.shared.generated.resources.desc_grade_empty
 import shiguangschedule.shared.generated.resources.label_course_count
 import shiguangschedule.shared.generated.resources.label_credits
@@ -104,11 +99,7 @@ fun GradeCenterScreen(
             summarizeRecords(savedRecords, semester)
         }
     )
-    // The database is the source of truth across process restarts; the store only
-    // provides an immediate in-process update while Room emits its new snapshot.
     val effectiveUiState = savedState ?: importedState ?: uiState ?: GradeCenterUiState()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
     var semesterMenuExpanded by remember { mutableStateOf(false) }
     var selectedSemester by remember { mutableStateOf(effectiveUiState.selectedSemester) }
     LaunchedEffect(effectiveUiState.semesters, effectiveUiState.selectedSemester) {
@@ -134,26 +125,8 @@ fun GradeCenterScreen(
         showNavigation = false
     ) { navigationPadding ->
         Scaffold(
-            modifier = if (useMiuix) Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection) else Modifier,
-            containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
             topBar = {
-                if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
-                    title = stringResource(Res.string.title_grade_center),
-                    largeTitle = stringResource(Res.string.title_grade_center),
-                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                    scrollBehavior = miuixScrollBehavior,
-                    navigationIcon = {
-                        top.yukonga.miuix.kmp.basic.IconButton(onBack) {
-                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
-                        }
-                    },
-                    actions = {
-                        top.yukonga.miuix.kmp.basic.IconButton(onImport, enabled = !effectiveUiState.isLoading) {
-                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.list_alt_24px), stringResource(Res.string.action_import_grade))
-                        }
-                    },
-                    defaultWindowInsetsPadding = true,
-                ) else CenterAlignedTopAppBar(
+                CenterAlignedTopAppBar(
                     title = { Text(stringResource(Res.string.title_grade_center)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -237,38 +210,6 @@ private fun SemesterSelector(
     onExpandedChange: (Boolean) -> Unit,
     onSemesterSelected: (String) -> Unit
 ) {
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    if (useMiuix) {
-        Box {
-            top.yukonga.miuix.kmp.basic.Card(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { if (semesters.isNotEmpty()) onExpandedChange(true) },
-                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
-            ) {
-                top.yukonga.miuix.kmp.basic.BasicComponent(
-                    title = stringResource(Res.string.label_current_semester),
-                    summary = when (selectedSemester) { ALL_SEMESTERS -> stringResource(Res.string.label_all_semesters); else -> selectedSemester ?: stringResource(Res.string.status_no_data) },
-                    onClick = { if (semesters.isNotEmpty()) onExpandedChange(true) },
-                    endActions = { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.chevron_right_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions) }
-                )
-            }
-            if (expanded) {
-                top.yukonga.miuix.kmp.window.WindowDialog(show = true, title = stringResource(Res.string.label_current_semester), onDismissRequest = { onExpandedChange(false) }, insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 16.dp)) {
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        val options = listOf(ALL_SEMESTERS) + semesters
-                        options.forEach { semester ->
-                            top.yukonga.miuix.kmp.basic.BasicComponent(
-                                title = if (semester == ALL_SEMESTERS) stringResource(Res.string.label_all_semesters) else semester,
-                                onClick = { onSemesterSelected(semester); onExpandedChange(false) },
-                                endActions = { if (semester == selectedSemester) top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.check_24px), null, tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
     Box {
         Card(
             onClick = { if (semesters.isNotEmpty()) onExpandedChange(true) },
@@ -355,13 +296,19 @@ private fun GradeCenterUiState.summarizeAll(): GradeSemesterSummary? {
 private fun summarizeRecords(records: List<GradeRecord>, semester: String): GradeSemesterSummary {
     val selected = records.filter { it.semester == semester }
     val credits = selected.mapNotNull { it.credits.toDoubleOrNull() }.sum()
-    val pairs = selected.mapNotNull { r ->
-        val c = r.credits.toDoubleOrNull(); val p = r.gradePoint.toDoubleOrNull()
-        if (c != null && p != null) c to p else null
+    val pairs = selected.mapNotNull { record ->
+        val courseCredits = record.credits.toDoubleOrNull()
+        val point = record.gradePoint.toDoubleOrNull()
+        if (courseCredits != null && point != null) courseCredits to point else null
     }
     val total = pairs.sumOf { it.first }
     val gpa = if (total > 0) "%.2f".format(pairs.sumOf { it.first * it.second } / total) else "--"
-    return GradeSemesterSummary(semester, gpa, if (credits % 1.0 == 0.0) credits.toInt().toString() else "%.2f".format(credits), selected.size)
+    return GradeSemesterSummary(
+        semester = semester,
+        gpa = gpa,
+        totalCredits = if (credits % 1.0 == 0.0) credits.toInt().toString() else "%.2f".format(credits),
+        courseCount = selected.size,
+    )
 }
 
 @Composable
@@ -394,18 +341,6 @@ private fun GradeSemesterSummary.rankingDisplay(): String? =
 
 @Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.basic.Card(
-            modifier = modifier,
-            colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                top.yukonga.miuix.kmp.basic.Text(label, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                top.yukonga.miuix.kmp.basic.Text(value, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title2)
-            }
-        }
-        return
-    }
     Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -416,20 +351,6 @@ private fun SummaryItem(label: String, value: String, modifier: Modifier = Modif
 
 @Composable
 private fun EmptyGradeCard(onImport: () -> Unit) {
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.basic.Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
-        ) {
-            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.list_alt_24px), null, modifier = Modifier.size(48.dp), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary)
-                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.title_grade_empty), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title3)
-                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.desc_grade_empty), style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                top.yukonga.miuix.kmp.basic.Button(onClick = onImport) { top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.action_import_grade)) }
-            }
-        }
-        return
-    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -459,32 +380,6 @@ private fun EmptyGradeCard(onImport: () -> Unit) {
 @Composable
 private fun GradeRecordCard(record: GradeRecord) {
     var expanded by remember(record.id) { mutableStateOf(false) }
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.basic.Card(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { expanded = !expanded },
-            colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
-        ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        top.yukonga.miuix.kmp.basic.Text(record.courseName, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1, fontWeight = FontWeight.SemiBold)
-                        top.yukonga.miuix.kmp.basic.Text(record.courseType, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    }
-                    top.yukonga.miuix.kmp.basic.Text(record.score, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary)
-                }
-                top.yukonga.miuix.kmp.basic.Text("${stringResource(Res.string.label_credits)} ${record.credits}  ·  ${stringResource(Res.string.label_grade_point)} ${record.gradePoint}", style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2)
-                record.status?.let { top.yukonga.miuix.kmp.basic.Text(it, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.secondary) }
-                if (expanded) {
-                    DetailLineMiuix(stringResource(Res.string.label_teacher), record.teacher)
-                    DetailLineMiuix(stringResource(Res.string.label_exam_type), record.examType)
-                    DetailLineMiuix(stringResource(Res.string.label_score_composition), record.scoreComposition)
-                    DetailLineMiuix(stringResource(Res.string.label_score), record.score)
-                }
-            }
-        }
-        return
-    }
     Card(
         modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -511,16 +406,6 @@ private fun GradeRecordCard(record: GradeRecord) {
 }
 
 @Composable
-private fun DetailLineMiuix(label: String, value: String?) {
-    if (!value.isNullOrBlank()) {
-        Row(Modifier.fillMaxWidth()) {
-            top.yukonga.miuix.kmp.basic.Text(label, Modifier.weight(1f), color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            top.yukonga.miuix.kmp.basic.Text(value)
-        }
-    }
-}
-
-@Composable
 private fun DetailLine(label: String, value: String?) {
     if (!value.isNullOrBlank()) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -532,9 +417,7 @@ private fun DetailLine(label: String, value: String?) {
 
 @Composable
 private fun LoadingContent(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.CircularProgressIndicator() else CircularProgressIndicator()
-    }
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 }
 
 @Composable
@@ -544,12 +427,9 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, modifier: Modifie
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-            top.yukonga.miuix.kmp.basic.Text(message, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error)
-            top.yukonga.miuix.kmp.basic.Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) { top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.action_import_grade)) }
-        } else {
-            Text(message, color = MaterialTheme.colorScheme.error)
-            Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(Res.string.action_import_grade)) }
+        Text(message, color = MaterialTheme.colorScheme.error)
+        Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) {
+            Text(stringResource(Res.string.action_import_grade))
         }
     }
 }

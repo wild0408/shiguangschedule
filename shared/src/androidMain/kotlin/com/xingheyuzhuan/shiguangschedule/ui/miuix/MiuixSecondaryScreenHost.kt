@@ -19,6 +19,7 @@ import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixOpenSourceLicens
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixUpdateRepoScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixBackupScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixManageCourseTablesScreen
+import com.xingheyuzhuan.shiguangschedule.ui.settings.style.MiuixStyleSettingsScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixCourseNameListScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixCourseInstanceListScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixAddEditCourseScreen
@@ -46,6 +47,7 @@ internal fun MiuixSecondaryScreenHost(
         Destination.UpdateRepo -> MiuixUpdateRepoScreen(onBack)
         Destination.BackupAndRestore -> MiuixBackupScreen(onBack)
         Destination.ManageCourseTables -> MiuixManageCourseTablesScreen(onBack)
+        Destination.StyleSettings -> MiuixStyleSettingsScreen(onBack)
         Destination.CourseManagementList -> MiuixCourseNameListScreen(onNavigate, onBack)
         is Destination.CourseManagementDetail -> MiuixCourseInstanceListScreen(destination.courseName, onBack, onNavigate)
         is Destination.AddEditCourse -> MiuixAddEditCourseScreen(onBack, destination.courseId)
