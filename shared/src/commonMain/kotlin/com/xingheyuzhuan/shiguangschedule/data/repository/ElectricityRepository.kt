@@ -11,6 +11,7 @@ import com.xingheyuzhuan.shiguangschedule.data.db.main.ElectricityHistoryDao
 import com.xingheyuzhuan.shiguangschedule.tool.SecureCrypto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
@@ -24,13 +25,19 @@ class ElectricityRepository(
     private val historyDao: ElectricityHistoryDao,
     private val api: ElectricityApi
 ) {
-    private object K { val student=stringPreferencesKey("electricity_student"); val pwd=stringPreferencesKey("electricity_pwd"); val iv=stringPreferencesKey("electricity_iv"); val campus=stringPreferencesKey("electricity_campus"); val campusName=stringPreferencesKey("electricity_campus_name"); val building=stringPreferencesKey("electricity_building"); val buildingName=stringPreferencesKey("electricity_building_name"); val room=stringPreferencesKey("electricity_room"); val roomName=stringPreferencesKey("electricity_room_name"); val token=stringPreferencesKey("electricity_token") }
+    private object K { val student=stringPreferencesKey("electricity_student"); val pwd=stringPreferencesKey("electricity_pwd"); val iv=stringPreferencesKey("electricity_iv"); val campus=stringPreferencesKey("electricity_campus"); val campusName=stringPreferencesKey("electricity_campus_name"); val building=stringPreferencesKey("electricity_building"); val buildingName=stringPreferencesKey("electricity_building_name"); val room=stringPreferencesKey("electricity_room"); val roomName=stringPreferencesKey("electricity_room_name"); val token=stringPreferencesKey("electricity_token"); val campuses=stringPreferencesKey("electricity_campuses"); val buildings=stringPreferencesKey("electricity_buildings"); val buildingsParent=stringPreferencesKey("electricity_buildings_parent"); val rooms=stringPreferencesKey("electricity_rooms"); val roomsParent=stringPreferencesKey("electricity_rooms_parent") }
     val configFlow: Flow<ElectricityConfig?> = store.data.map { p ->
         val pwd = if (p[K.pwd] != null && p[K.iv] != null) crypto.decrypt(p[K.pwd]!!, p[K.iv]!!) else null
         if (p[K.student].isNullOrBlank() || pwd == null || p[K.campus].isNullOrBlank() || p[K.building].isNullOrBlank() || p[K.room].isNullOrBlank()) null else ElectricityConfig(p[K.student]!!, pwd, ElectricityLocation(p[K.campusName] ?: "", p[K.campus]!!), ElectricityLocation(p[K.buildingName] ?: "", p[K.building]!!), ElectricityLocation(p[K.roomName] ?: "", p[K.room]!!), p[K.token] ?: "")
     }
     suspend fun save(config: ElectricityConfig) { val c=crypto.encrypt(config.password) ?: error("无法安全保存密码"); store.edit { p -> p[K.student]=config.studentId; p[K.pwd]=c.encryptedData; p[K.iv]=c.iv; p[K.campus]=config.campus.value; p[K.campusName]=config.campus.name; p[K.building]=config.building.value; p[K.buildingName]=config.building.name; p[K.room]=config.room.value; p[K.roomName]=config.room.name; if (config.token.isNotBlank()) p[K.token]=config.token } }
-    suspend fun clear(config: ElectricityConfig?) { store.edit { p -> listOf(K.student,K.pwd,K.iv,K.campus,K.campusName,K.building,K.buildingName,K.room,K.roomName,K.token).forEach { p.remove(it) } }; config?.let { historyDao.delete(it.studentId, it.room.value) } }
+    suspend fun clear(config: ElectricityConfig?) { store.edit { p -> listOf(K.student,K.pwd,K.iv,K.campus,K.campusName,K.building,K.buildingName,K.room,K.roomName,K.token,K.campuses,K.buildings,K.buildingsParent,K.rooms,K.roomsParent).forEach { p.remove(it) } }; config?.let { historyDao.delete(it.studentId, it.room.value) } }
+    private fun encode(items: List<ElectricityLocation>) = items.joinToString("\u001e") { "${it.value}\u001f${it.name}" }
+    private fun decode(raw: String?): List<ElectricityLocation> = raw.orEmpty().split("\u001e").mapNotNull { row -> row.split("\u001f", limit = 2).takeIf { it.size == 2 }?.let { ElectricityLocation(it[1], it[0]) } }
+    suspend fun storedCampuses(): List<ElectricityLocation> = decode(store.data.first()[K.campuses])
+    suspend fun storedBuildings(parent: String): List<ElectricityLocation> { val p = store.data.first(); return if (p[K.buildingsParent] == parent) decode(p[K.buildings]) else emptyList() }
+    suspend fun storedRooms(parent: String): List<ElectricityLocation> { val p = store.data.first(); return if (p[K.roomsParent] == parent) decode(p[K.rooms]) else emptyList() }
+    suspend fun saveLocations(level: Int, items: List<ElectricityLocation>, parent: String = "") { store.edit { p -> when (level) { 0 -> p[K.campuses] = encode(items); 1 -> { p[K.buildings] = encode(items); p[K.buildingsParent] = parent }; 2 -> { p[K.rooms] = encode(items); p[K.roomsParent] = parent } } } }
     suspend fun login(id:String,pwd:String)=api.login(id,pwd)
     suspend fun campuses(token:String)=api.locations(token,0)
     suspend fun buildings(token:String,campus:String)=api.locations(token,1,campus)

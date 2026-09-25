@@ -32,15 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.DpSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -73,8 +69,6 @@ fun AddEditCourseScreen(
     viewModel: AddEditCourseViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    val pageTitle = if (uiState.isEditing) stringResource(Res.string.title_edit_course) else stringResource(Res.string.title_add_course)
 
     LaunchedEffect(courseId) {
         viewModel.initWithId(courseId)
@@ -137,21 +131,13 @@ fun AddEditCourseScreen(
     }
 
     Scaffold(
-        containerColor = if (useMiuix) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
-                title = pageTitle,
-                largeTitle = pageTitle,
-                color = MiuixTheme.colorScheme.surface,
-                defaultWindowInsetsPadding = true,
-                navigationIcon = { top.yukonga.miuix.kmp.basic.IconButton(handleBackPress) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = MiuixTheme.colorScheme.onSurface) } },
-                actions = {
-                    if (uiState.isEditing) top.yukonga.miuix.kmp.basic.IconButton(viewModel::onDelete) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), stringResource(Res.string.a11y_delete), tint = MiuixTheme.colorScheme.error) }
-                    top.yukonga.miuix.kmp.basic.IconButton({ validateAndSave(uiState, viewModel, nameEmptyText, toastTimeInvalid) }) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.check_24px), stringResource(Res.string.a11y_save), tint = MiuixTheme.colorScheme.primary) }
-                }
-            ) else TopAppBar(
+            TopAppBar(
                 title = {
-                    Text(pageTitle)
+                    Text(
+                        text = if (uiState.isEditing) stringResource(Res.string.title_edit_course)
+                        else stringResource(Res.string.title_add_course)
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = handleBackPress) {
@@ -168,7 +154,21 @@ fun AddEditCourseScreen(
                         }
                     }
                     IconButton(
-                        onClick = { validateAndSave(uiState, viewModel, nameEmptyText, toastTimeInvalid) }
+                        onClick = {
+                            if (uiState.name.isBlank()) {
+                                ToastManager.show(nameEmptyText)
+                            } else {
+                                val allValid = uiState.schemes.all { s ->
+                                    if (s.isCustomTime) {
+                                        s.customStartTime.isNotBlank() && s.customEndTime.isNotBlank() && s.customStartTime < s.customEndTime
+                                    } else {
+                                        s.startSection <= s.endSection
+                                    }
+                                }
+                                if (allValid) viewModel.onSave()
+                                else ToastManager.show(toastTimeInvalid)
+                            }
+                        }
                     ) {
                         Icon(vectorResource(Res.drawable.check_24px), contentDescription = stringResource(Res.string.a11y_save))
                     }
@@ -187,13 +187,7 @@ fun AddEditCourseScreen(
             // 课程名称输入
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                if (useMiuix) top.yukonga.miuix.kmp.basic.TextField(
-                    value = uiState.name,
-                    onValueChange = viewModel::onNameChange,
-                    label = stringResource(Res.string.label_course_name),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                ) else OutlinedTextField(
+                OutlinedTextField(
                     value = uiState.name,
                     onValueChange = viewModel::onNameChange,
                     label = { Text(stringResource(Res.string.label_course_name)) },
@@ -202,7 +196,7 @@ fun AddEditCourseScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                if (!useMiuix) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -247,14 +241,7 @@ fun AddEditCourseScreen(
 
             // 添加方案按钮
             item {
-                if (useMiuix) top.yukonga.miuix.kmp.basic.Button(
-                    onClick = viewModel::addScheme,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
-                ) {
-                    top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.add_24px), null, tint = MiuixTheme.colorScheme.onPrimary)
-                    Spacer(Modifier.width(8.dp))
-                    top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.action_add))
-                } else Button(
+                Button(
                     onClick = viewModel::addScheme,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -347,20 +334,7 @@ fun AddEditCourseScreen(
 
     // 退出确认弹窗
     if (showExitConfirmDialog) {
-        if (useMiuix) top.yukonga.miuix.kmp.window.WindowDialog(
-            show = true,
-            onDismissRequest = { showExitConfirmDialog = false },
-            title = stringResource(Res.string.common_dialog_title_abandon_changes),
-            insideMargin = DpSize(16.dp, 16.dp)
-        ) {
-            androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                top.yukonga.miuix.kmp.basic.Text(stringResource(Res.string.common_dialog_msg_unsaved_changes), style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.common_action_continue_editing), { showExitConfirmDialog = false }, Modifier.weight(1f))
-                    top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.common_action_exit_without_save), { showExitConfirmDialog = false; onBack() }, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = MiuixTheme.colorScheme.error))
-                }
-            }
-        } else AlertDialog(
+        AlertDialog(
             onDismissRequest = { showExitConfirmDialog = false },
             title = {
                 Text(text = stringResource(Res.string.common_dialog_title_abandon_changes))
@@ -385,16 +359,4 @@ fun AddEditCourseScreen(
             }
         )
     }
-}
-
-private fun validateAndSave(uiState: AddEditCourseUiState, viewModel: AddEditCourseViewModel, nameEmptyText: String, timeInvalidText: String) {
-    if (uiState.name.isBlank()) {
-        ToastManager.show(nameEmptyText)
-        return
-    }
-    val allValid = uiState.schemes.all { scheme ->
-        if (scheme.isCustomTime) scheme.customStartTime.isNotBlank() && scheme.customEndTime.isNotBlank() && scheme.customStartTime < scheme.customEndTime
-        else scheme.startSection <= scheme.endSection
-    }
-    if (allValid) viewModel.onSave() else ToastManager.show(timeInvalidText)
 }

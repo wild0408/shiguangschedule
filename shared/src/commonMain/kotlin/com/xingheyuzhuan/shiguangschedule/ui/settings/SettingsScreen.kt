@@ -38,11 +38,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdaptiveNavigationScaffold
 import com.xingheyuzhuan.shiguangschedule.ui.components.DatePickerModal
 import com.xingheyuzhuan.shiguangschedule.ui.components.NativeNumberPicker
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
@@ -110,12 +108,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    val miuixScrollBehavior = if (useMiuix) {
-        top.yukonga.miuix.kmp.basic.MiuixScrollBehavior()
-    } else {
-        null
-    }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
@@ -124,35 +116,16 @@ fun SettingsScreen(
         onTabSelected = { dest -> onNavigate(dest) }
     ) { navPadding ->
         Scaffold(
-            containerColor = if (useMiuix) {
-                top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface
-            } else {
-                MaterialTheme.colorScheme.background
-            },
-            modifier = if (useMiuix) {
-                Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection)
-            } else {
-                Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-            },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                if (useMiuix) {
-                    top.yukonga.miuix.kmp.basic.TopAppBar(
-                        title = stringResource(Res.string.title_schedule_settings),
-                        largeTitle = stringResource(Res.string.title_schedule_settings),
-                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                        scrollBehavior = miuixScrollBehavior,
-                        defaultWindowInsetsPadding = true,
+                CenterAlignedTopAppBar(
+                    title = { Text(stringResource(Res.string.title_schedule_settings)) },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface
                     )
-                } else {
-                    CenterAlignedTopAppBar(
-                        title = { Text(stringResource(Res.string.title_schedule_settings)) },
-                        scrollBehavior = scrollBehavior,
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surface
-                        )
-                    )
-                }
+                )
             }
         ) { innerPadding ->
             if (!uiState.isReady) {
@@ -210,7 +183,7 @@ fun SettingsScreen(
                             onQuickActionsClick = { onNavigate(Destination.QuickActions) }
                         )
                     }
-                    if (!useMiuix) item {
+                    item {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
                             thickness = 1.dp,
@@ -290,7 +263,10 @@ private fun GeneralSettingsSection(
     onFirstDayOfWeekClick: () -> Unit,
     onQuickActionsClick: () -> Unit
 ) {
-    SettingsSectionCard {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(
             modifier = Modifier.padding(SETTING_PADDING),
             verticalArrangement = Arrangement.spacedBy(ITEM_SPACING)
@@ -305,16 +281,14 @@ private fun GeneralSettingsSection(
                 title = stringResource(Res.string.item_show_non_current_week),
                 subtitle = stringResource(Res.string.desc_show_non_current_week)
             ) {
-                if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.Switch(checked = showNonCurrentWeek, onCheckedChange = onShowNonCurrentWeekChanged)
-                else Switch(checked = showNonCurrentWeek, onCheckedChange = onShowNonCurrentWeekChanged)
+                Switch(checked = showNonCurrentWeek, onCheckedChange = onShowNonCurrentWeekChanged)
             }
 
             SettingItem(
                 title = stringResource(Res.string.item_show_weekends),
                 subtitle = stringResource(Res.string.desc_show_weekends)
             ) {
-                if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.Switch(checked = showWeekends, onCheckedChange = onShowWeekendsChanged)
-                else Switch(checked = showWeekends, onCheckedChange = onShowWeekendsChanged)
+                Switch(checked = showWeekends, onCheckedChange = onShowWeekendsChanged)
             }
 
             SettingItem(
@@ -394,7 +368,10 @@ private fun GeneralSettingsSection(
  */
 @Composable
 private fun AdvancedSettingsSection(onNavigate: (Destination) -> Unit) {
-    SettingsSectionCard {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(
             modifier = Modifier.padding(SETTING_PADDING),
             verticalArrangement = Arrangement.spacedBy(ITEM_SPACING)
@@ -453,17 +430,8 @@ private fun SettingItem(
     subtitle: String,
     icon: ImageVector = vectorResource(Res.drawable.chevron_right_24px),
     onClick: (() -> Unit)? = null,
-    trailingContent: @Composable () -> Unit = {
-        if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-            top.yukonga.miuix.kmp.basic.Icon(
-                vectorResource(Res.drawable.chevron_right_24px),
-                contentDescription = null,
-                tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions
-            )
-        } else Icon(icon, contentDescription = null)
-    }
+    trailingContent: @Composable () -> Unit = { Icon(icon, contentDescription = null) }
 ) {
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -473,27 +441,10 @@ private fun SettingItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-            if (useMiuix) {
-                top.yukonga.miuix.kmp.basic.Text(title, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
-                top.yukonga.miuix.kmp.basic.Text(subtitle, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
-            } else {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium)
-            }
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
         }
         trailingContent()
-    }
-}
-
-@Composable
-private fun SettingsSectionCard(content: @Composable () -> Unit) {
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.basic.Card(Modifier.fillMaxWidth()) { content() }
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) { content() }
     }
 }
 
@@ -520,18 +471,6 @@ fun ManualWeekPickerDialog(
 
     var dialogSelectedValue by remember { mutableStateOf(initialSelectedValue) }
 
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.overlay.OverlayDialog(title = stringResource(Res.string.dialog_title_manual_set_week), show = true, onDismissRequest = onDismiss) {
-            Column(Modifier.fillMaxWidth()) {
-                NativeNumberPicker(weekOptions, dialogSelectedValue, { dialogSelectedValue = it }, Modifier.fillMaxWidth())
-                MiuixDialogActions(onDismiss, {
-                    val weekNumber = if (dialogSelectedValue == optionOnVacationText) null else dialogSelectedValue.filter { it.isDigit() }.toIntOrNull()
-                    onConfirm(weekNumber)
-                })
-            }
-        }
-        return
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.dialog_title_manual_set_week)) },
@@ -588,15 +527,6 @@ fun DayOfWeekPickerDialog(
 
     var dialogSelectedText by remember { mutableStateOf(initialSelectedDayText) }
 
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.overlay.OverlayDialog(title = stringResource(Res.string.dialog_title_set_first_day_of_week), show = true, onDismissRequest = onDismiss) {
-            Column(Modifier.fillMaxWidth()) {
-                NativeNumberPicker(dayOptions, dialogSelectedText, { dialogSelectedText = it }, Modifier.fillMaxWidth())
-                MiuixDialogActions(onDismiss, { onConfirm(dayOptionsMap[dialogSelectedText] ?: DayOfWeek.MONDAY.isoDayNumber) })
-            }
-        }
-        return
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.dialog_title_set_first_day_of_week)) },
@@ -639,15 +569,6 @@ private fun NumberPickerDialog(
 ) {
     var dialogSelectedValue by remember { mutableIntStateOf(initialValue.coerceIn(range)) }
 
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.overlay.OverlayDialog(title = title, show = true, onDismissRequest = onDismiss) {
-            Column(Modifier.fillMaxWidth()) {
-                NativeNumberPicker(range.toList(), dialogSelectedValue, { dialogSelectedValue = it }, Modifier.fillMaxWidth())
-                MiuixDialogActions(onDismiss, { onConfirm(dialogSelectedValue) })
-            }
-        }
-        return
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -672,12 +593,4 @@ private fun NumberPickerDialog(
             }
         }
     )
-}
-
-@Composable
-private fun MiuixDialogActions(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_cancel), onDismiss, Modifier.weight(1f))
-        top.yukonga.miuix.kmp.basic.TextButton(stringResource(Res.string.action_confirm), onConfirm, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
-    }
 }

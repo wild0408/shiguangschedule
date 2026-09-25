@@ -26,10 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.DpSize
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.stringResource
 import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.title_select_week
@@ -61,15 +57,21 @@ fun WeekSelectorBottomSheet(
         }
     }
 
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    val content: @Composable () -> Unit = {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState()
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (!useMiuix) Text(text = stringResource(Res.string.title_select_week), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+            Text(
+                text = stringResource(Res.string.title_select_week),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(16.dp)
+            )
 
             // 网格状的周次选择器
             LazyVerticalGrid(
@@ -89,14 +91,14 @@ fun WeekSelectorBottomSheet(
 
                     // 根据周次状态决定颜色
                     val backgroundColor = when {
-                        isSelectedWeek -> if (useMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
-                        isCurrentWeek -> if (useMiuix) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer
+                        isSelectedWeek -> MaterialTheme.colorScheme.primary
+                        isCurrentWeek -> MaterialTheme.colorScheme.primaryContainer
                         else -> Color.Transparent
                     }
                     val textColor = when {
-                        isSelectedWeek -> if (useMiuix) MiuixTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary
-                        isCurrentWeek -> if (useMiuix) MiuixTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
-                        else -> if (useMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface
+                        isSelectedWeek -> MaterialTheme.colorScheme.onPrimary
+                        isCurrentWeek -> MaterialTheme.colorScheme.onPrimaryContainer
+                        else -> MaterialTheme.colorScheme.onSurface
                     }
 
                     Box(
@@ -116,16 +118,6 @@ fun WeekSelectorBottomSheet(
                     }
                 }
             }
-        }
-    }
-    if (useMiuix) {
-        top.yukonga.miuix.kmp.window.WindowDialog(
-            title = stringResource(Res.string.title_select_week), show = true,
-            onDismissRequest = onDismissRequest, insideMargin = DpSize(16.dp, 16.dp)
-        ) { content() }
-    } else {
-        ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = rememberModalBottomSheetState()) {
-            content()
         }
     }
 }

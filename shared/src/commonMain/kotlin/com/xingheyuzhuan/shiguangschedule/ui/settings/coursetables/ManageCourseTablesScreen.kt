@@ -34,11 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.DpSize
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseTable
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -75,7 +72,6 @@ import shiguangschedule.shared.generated.resources.toast_edit_table_success
 import shiguangschedule.shared.generated.resources.toast_name_empty
 import shiguangschedule.shared.generated.resources.toast_switch_table_success
 import kotlin.time.Instant
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +80,6 @@ fun ManageCourseTablesScreen(
     viewModel: ManageCourseTablesViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     // --- 对话框状态管理 ---
     var showAddTableDialog by remember { mutableStateOf(false) }
@@ -115,19 +110,8 @@ fun ManageCourseTablesScreen(
     val toastDeleteLastFailed = stringResource(Res.string.toast_delete_last_table_failed)
 
     Scaffold(
-        containerColor = if (useMiuix) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
-                title = titleManageTables,
-                largeTitle = titleManageTables,
-                color = MiuixTheme.colorScheme.surface,
-                navigationIcon = {
-                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
-                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), a11yBack, tint = MiuixTheme.colorScheme.onSurface)
-                    }
-                },
-                defaultWindowInsetsPadding = true,
-            ) else TopAppBar(
+            TopAppBar(
                 title = { Text(titleManageTables) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -137,9 +121,7 @@ fun ManageCourseTablesScreen(
             )
         },
         floatingActionButton = {
-            if (useMiuix) top.yukonga.miuix.kmp.basic.FloatingActionButton(onClick = { showAddTableDialog = true }) {
-                top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.add_24px), a11yAddNewTable)
-            } else FloatingActionButton(onClick = { showAddTableDialog = true }) {
+            FloatingActionButton(onClick = { showAddTableDialog = true }) {
                 Icon(vectorResource(Res.drawable.add_24px), contentDescription = a11yAddNewTable)
             }
         }
@@ -153,8 +135,7 @@ fun ManageCourseTablesScreen(
         ) {
             if (uiState.courseTables.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (useMiuix) top.yukonga.miuix.kmp.basic.Text(textNoTablesHint, style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    else Text(text = textNoTablesHint, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = textNoTablesHint, style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
                 LazyColumn(
@@ -191,26 +172,10 @@ fun ManageCourseTablesScreen(
         // --- Add Dialog ---
         if (showAddTableDialog) {
             val addSuccessMsg = stringResource(Res.string.toast_add_table_success, newTableName)
-            val dismissAdd = { showAddTableDialog = false; newTableName = "" }
-            val confirmAdd = {
-                if (newTableName.isNotBlank()) {
-                    viewModel.createNewCourseTable(newTableName)
-                    ToastManager.show(addSuccessMsg)
-                    dismissAdd()
-                } else ToastManager.show(toastNameEmpty)
-            }
-            if (useMiuix) CourseTableNameMiuixDialog(
-                title = dialogTitleAddTable,
-                value = newTableName,
-                onValueChange = { newTableName = it },
-                label = labelTableName,
-                confirmText = actionAdd,
-                cancelText = actionCancel,
-                onConfirm = confirmAdd,
-                onDismiss = dismissAdd,
-            ) else AlertDialog(
+            AlertDialog(
                 onDismissRequest = {
-                    dismissAdd()
+                    showAddTableDialog = false
+                    newTableName = ""
                 },
                 title = { Text(dialogTitleAddTable) },
                 text = {
@@ -223,11 +188,21 @@ fun ManageCourseTablesScreen(
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = confirmAdd) { Text(actionAdd) }
+                    TextButton(onClick = {
+                        if (newTableName.isNotBlank()) {
+                            viewModel.createNewCourseTable(newTableName)
+                            ToastManager.show(addSuccessMsg)
+                            showAddTableDialog = false
+                            newTableName = ""
+                        } else {
+                            ToastManager.show(toastNameEmpty)
+                        }
+                    }) { Text(actionAdd) }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        dismissAdd()
+                        showAddTableDialog = false
+                        newTableName = ""
                     }) { Text(actionCancel) }
                 }
             )
@@ -235,26 +210,11 @@ fun ManageCourseTablesScreen(
 
         // --- Edit Dialog ---
         if (showEditTableDialog && editingTableInfo != null) {
-            val dismissEdit = { showEditTableDialog = false; editingTableInfo = null; editedTableName = "" }
-            val confirmEdit = {
-                if (editedTableName.isNotBlank()) {
-                    editingTableInfo?.let { viewModel.updateCourseTable(it.copy(name = editedTableName)) }
-                    ToastManager.show(toastEditSuccess)
-                    dismissEdit()
-                } else ToastManager.show(toastNameEmpty)
-            }
-            if (useMiuix) CourseTableNameMiuixDialog(
-                title = dialogTitleEditTable,
-                value = editedTableName,
-                onValueChange = { editedTableName = it },
-                label = labelTableName,
-                confirmText = a11ySave,
-                cancelText = actionCancel,
-                onConfirm = confirmEdit,
-                onDismiss = dismissEdit,
-            ) else AlertDialog(
+            AlertDialog(
                 onDismissRequest = {
-                    dismissEdit()
+                    showEditTableDialog = false
+                    editingTableInfo = null
+                    editedTableName = ""
                 },
                 title = { Text(dialogTitleEditTable) },
                 text = {
@@ -267,11 +227,25 @@ fun ManageCourseTablesScreen(
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = confirmEdit) { Text(a11ySave) }
+                    TextButton(onClick = {
+                        if (editedTableName.isNotBlank()) {
+                            editingTableInfo?.let { tableToEdit ->
+                                viewModel.updateCourseTable(tableToEdit.copy(name = editedTableName))
+                                ToastManager.show(toastEditSuccess)
+                                showEditTableDialog = false
+                                editingTableInfo = null
+                                editedTableName = ""
+                            }
+                        } else {
+                            ToastManager.show(toastNameEmpty)
+                        }
+                    }) { Text(a11ySave) }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        dismissEdit()
+                        showEditTableDialog = false
+                        editingTableInfo = null
+                        editedTableName = ""
                     }) { Text(actionCancel) }
                 }
             )
@@ -282,28 +256,35 @@ fun ManageCourseTablesScreen(
             val confirmDeleteText = stringResource(Res.string.dialog_text_confirm_delete, tableToDelete?.name ?: "")
             val deleteSuccessMsg = stringResource(Res.string.toast_delete_table_success, tableToDelete?.name ?: "")
 
-            val dismissDelete = { showDeleteConfirmDialog = false; tableToDelete = null }
-            val confirmDelete = {
-                if (uiState.courseTables.size > 1) {
-                    tableToDelete?.let { viewModel.deleteCourseTable(it); ToastManager.show(deleteSuccessMsg) }
-                } else ToastManager.show(toastDeleteLastFailed)
-                dismissDelete()
-            }
-            if (useMiuix) CourseTableConfirmMiuixDialog(dialogTitleConfirmDelete, confirmDeleteText, actionCancel, actionDelete, dismissDelete, confirmDelete)
-            else AlertDialog(
+            AlertDialog(
                 onDismissRequest = {
-                    dismissDelete()
+                    showDeleteConfirmDialog = false
+                    tableToDelete = null
                 },
                 title = { Text(dialogTitleConfirmDelete) },
                 text = { Text(confirmDeleteText) },
                 confirmButton = {
-                    TextButton(onClick = confirmDelete) {
+                    TextButton(onClick = {
+                        if (uiState.courseTables.size > 1) {
+                            tableToDelete?.let {
+                                viewModel.deleteCourseTable(it)
+                                ToastManager.show(deleteSuccessMsg)
+                            }
+                            showDeleteConfirmDialog = false
+                            tableToDelete = null
+                        } else {
+                            ToastManager.show(toastDeleteLastFailed)
+                            showDeleteConfirmDialog = false
+                            tableToDelete = null
+                        }
+                    }) {
                         Text(actionDelete, color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        dismissDelete()
+                        showDeleteConfirmDialog = false
+                        tableToDelete = null
                     }) { Text(actionCancel) }
                 }
             )
@@ -329,17 +310,7 @@ fun CourseTableCard(
     val idText = stringResource(Res.string.course_table_id_prefix, formattedId)
     val createdAtText = stringResource(Res.string.course_table_created_at_prefix, formattedDate)
 
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
-    if (useMiuix) top.yukonga.miuix.kmp.basic.Card(
-        modifier = Modifier.fillMaxWidth(),
-        insideMargin = PaddingValues(16.dp),
-        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
-            color = if (isSelected) MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.22f) else MiuixTheme.colorScheme.surfaceContainer
-        ),
-        onClick = { onCardClick(tableInfo) },
-    ) {
-        CourseTableCardContent(tableInfo, isSelected, idText, createdAtText, a11yCurrentTable, a11yEdit, a11yDelete, onEditClick, onDeleteClick, true)
-    } else Card(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCardClick(tableInfo) },
@@ -348,101 +319,42 @@ fun CourseTableCard(
         ),
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
-        CourseTableCardContent(tableInfo, isSelected, idText, createdAtText, a11yCurrentTable, a11yEdit, a11yDelete, onEditClick, onDeleteClick, false)
-    }
-}
-
-@Composable
-private fun CourseTableCardContent(
-    tableInfo: CourseTable,
-    isSelected: Boolean,
-    idText: String,
-    createdAtText: String,
-    currentDescription: String,
-    editDescription: String,
-    deleteDescription: String,
-    onEditClick: (CourseTable) -> Unit,
-    onDeleteClick: (CourseTable) -> Unit,
-    useMiuix: Boolean,
-) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (useMiuix) Modifier else Modifier.padding(16.dp)),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                if (useMiuix) {
-                    top.yukonga.miuix.kmp.basic.Text(tableInfo.name, style = MiuixTheme.textStyles.body1)
-                    top.yukonga.miuix.kmp.basic.Text(idText, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    top.yukonga.miuix.kmp.basic.Text(createdAtText, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                } else {
-                    Text(text = tableInfo.name, style = MaterialTheme.typography.titleMedium)
-                    Text(text = idText, style = MaterialTheme.typography.bodySmall)
-                    Text(
+                Text(text = tableInfo.name, style = MaterialTheme.typography.titleMedium)
+                Text(text = idText, style = MaterialTheme.typography.bodySmall)
+                Text(
                     text = createdAtText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
-                }
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isSelected) {
-                    if (useMiuix) top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.check_circle_24px), currentDescription, tint = MiuixTheme.colorScheme.primary)
-                    else Icon(
+                    Icon(
                         imageVector = vectorResource(Res.drawable.check_circle_24px),
-                        contentDescription = currentDescription,
+                        contentDescription = a11yCurrentTable,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(end = 4.dp)
                     )
                 }
-                if (useMiuix) {
-                    top.yukonga.miuix.kmp.basic.IconButton({ onEditClick(tableInfo) }) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.edit_24px), editDescription) }
-                    top.yukonga.miuix.kmp.basic.IconButton({ onDeleteClick(tableInfo) }) { top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.delete_24px), deleteDescription, tint = MiuixTheme.colorScheme.error) }
-                } else {
-                    IconButton(onClick = { onEditClick(tableInfo) }) { Icon(vectorResource(Res.drawable.edit_24px), contentDescription = editDescription) }
-                    IconButton(onClick = { onDeleteClick(tableInfo) }) { Icon(vectorResource(Res.drawable.delete_24px), contentDescription = deleteDescription) }
+                IconButton(onClick = { onEditClick(tableInfo) }) {
+                    Icon(vectorResource(Res.drawable.edit_24px), contentDescription = a11yEdit)
+                }
+                IconButton(onClick = { onDeleteClick(tableInfo) }) {
+                    Icon(vectorResource(Res.drawable.delete_24px), contentDescription = a11yDelete)
                 }
             }
         }
-}
-
-@Composable
-private fun CourseTableNameMiuixDialog(
-    title: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    confirmText: String,
-    cancelText: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = title, insideMargin = DpSize(16.dp, 16.dp)) {
-          Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            top.yukonga.miuix.kmp.basic.TextField(value, onValueChange, Modifier.fillMaxWidth(), label = label, singleLine = true)
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                top.yukonga.miuix.kmp.basic.TextButton(cancelText, onDismiss, Modifier.weight(1f))
-                top.yukonga.miuix.kmp.basic.TextButton(confirmText, onConfirm, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary())
-            }
-        }
-    }
-}
-
-@Composable
-private fun CourseTableConfirmMiuixDialog(title: String, summary: String, cancelText: String, deleteText: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismiss, title = title, summary = summary, insideMargin = DpSize(16.dp, 16.dp)) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                top.yukonga.miuix.kmp.basic.Text(summary, style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    top.yukonga.miuix.kmp.basic.TextButton(cancelText, onDismiss, Modifier.weight(1f))
-                    top.yukonga.miuix.kmp.basic.TextButton(deleteText, onConfirm, Modifier.weight(1f), colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColors(color = MiuixTheme.colorScheme.error))
-                }
-            }
     }
 }
 

@@ -1,9 +1,7 @@
 package com.xingheyuzhuan.shiguangschedule.ui.schedule
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -12,14 +10,10 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -47,23 +41,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseTable
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.data.model.schedule_style.ScheduleModeProto
 import com.xingheyuzhuan.shiguangschedule.navigation.AddEditCourseChannel
 import com.xingheyuzhuan.shiguangschedule.navigation.PresetCourseData
@@ -76,12 +62,7 @@ import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.ScheduleGridAct
 import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.ScheduleGridStyleComposed
 import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.ScheduleGridViewState
 import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.WeekSelectorBottomSheet
-import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.androidLiquidGlass
-import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.AndroidLiquidGlassButton
-import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.AndroidLiquidGlassTopBar
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.schedule.components.rememberScheduleGridState
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
@@ -100,11 +81,6 @@ import shiguangschedule.shared.generated.resources.arrow_drop_down_24px
 import shiguangschedule.shared.generated.resources.format_week_display
 import shiguangschedule.shared.generated.resources.snackbar_add_course_within_semester
 import shiguangschedule.shared.generated.resources.swap_horiz_24px
-import shiguangschedule.shared.generated.resources.refresh_24px
-import shiguangschedule.shared.generated.resources.more_vert_24px
-import shiguangschedule.shared.generated.resources.palette_24px
-import shiguangschedule.shared.generated.resources.archive_24px
-import shiguangschedule.shared.generated.resources.double_arrow_24px
 import shiguangschedule.shared.generated.resources.title_current_week
 import shiguangschedule.shared.generated.resources.title_semester_not_set
 import shiguangschedule.shared.generated.resources.title_vacation
@@ -126,30 +102,7 @@ fun WeeklyScheduleScreen(
     onBack: () -> Unit,
     viewModel: WeeklyScheduleViewModel = koinViewModel()
 ) {
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        MiuixWeeklyScheduleScreen(
-            onNavigate = onNavigate,
-            onBack = onBack,
-            viewModel = viewModel
-        )
-        return
-    }
-    LegacyWeeklyScheduleScreen(
-        onNavigate = onNavigate,
-        onBack = onBack,
-        viewModel = viewModel
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
-@Composable
-private fun LegacyWeeklyScheduleScreen(
-    onNavigate: (Destination) -> Unit,
-    onBack: () -> Unit,
-    viewModel: WeeklyScheduleViewModel = koinViewModel()
-) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     val today = remember {
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
@@ -188,7 +141,6 @@ private fun LegacyWeeklyScheduleScreen(
     // UI 交互控制弹窗标志位
     var showWeekSelector by remember { mutableStateOf(false) }
     var showTableSwitcher by remember { mutableStateOf(false) }
-    var showMoreMenu by remember { mutableStateOf(false) }
     var isGridHolding by remember { mutableStateOf(false) }
     var selectedBlockForDetail by remember { mutableStateOf<MergedCourseBlock?>(null) }
 
@@ -217,7 +169,6 @@ private fun LegacyWeeklyScheduleScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val miuixScrollBehavior = if (useMiuix) top.yukonga.miuix.kmp.basic.MiuixScrollBehavior() else null
 
     val gridScrollState = rememberScrollState()
 
@@ -238,8 +189,6 @@ private fun LegacyWeeklyScheduleScreen(
             stringResource(Res.string.title_vacation)
         }
     }
-    val canReturnToCurrentWeek = uiState.currentWeekNumber != null &&
-        uiState.weekIndexInPager != uiState.currentWeekNumber
 
     val collapseFraction = scrollBehavior.state.collapsedFraction
 
@@ -269,10 +218,7 @@ private fun LegacyWeeklyScheduleScreen(
             }
         }
 
-    val totalBottomOffset = systemNavigationBarInset + animatedBottomBarHeight
-    // Keep a reference-style tail below the final period so the schedule can
-    // still scroll when the configured periods otherwise fit the viewport.
-    val scheduleBottomScrollPadding = maxOf(totalBottomOffset, 140.dp)
+        val totalBottomOffset = systemNavigationBarInset + animatedBottomBarHeight
 
         Box(modifier = Modifier.fillMaxSize()) {
             if (composedStyle.backgroundImagePath.isNotEmpty()) {
@@ -287,88 +233,11 @@ private fun LegacyWeeklyScheduleScreen(
             Scaffold(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(
-                        if (useMiuix) {
-                            Modifier.nestedScroll(miuixScrollBehavior!!.nestedScrollConnection)
-                        } else {
-                            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-                        }
-                    ),
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
                 containerColor = Color.Transparent,
                 contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.navigationBars),
-                    topBar = {
-                        if (useMiuix) {
-                        val collapsedFraction = miuixScrollBehavior?.state?.collapsedFraction ?: 0f
-                        val glassFraction by animateFloatAsState(
-                            targetValue = collapsedFraction.coerceIn(0f, 1f),
-                            animationSpec = tween(durationMillis = 180),
-                            label = "scheduleTopBarGlass"
-                        )
-                        val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                        AndroidLiquidGlassTopBar(fraction = glassFraction, modifier = Modifier.fillMaxWidth()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = statusBarPadding)
-                                    .height(76.dp)
-                            ) {
-                                Text(
-                                    text = displayTitle,
-                                    color = MiuixTheme.colorScheme.onSurface,
-                                    style = MiuixTheme.textStyles.title4,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .padding(horizontal = 120.dp)
-                                )
-                                androidx.compose.foundation.layout.Row(
-                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
-                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                if (canReturnToCurrentWeek) {
-                                    ScheduleTopBarIconButton(
-                                        fraction = glassFraction,
-                                        onClick = {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(INFINITE_PAGER_CENTER) }
-                                        }
-                                    ) {
-                                        top.yukonga.miuix.kmp.basic.Icon(
-                                            vectorResource(Res.drawable.refresh_24px),
-                                            "返回本周",
-                                            tint = customTextColor
-                                        )
-                                    }
-                                }
-                                ScheduleTopBarIconButton(fraction = glassFraction, onClick = { showTableSwitcher = true }) {
-                                    top.yukonga.miuix.kmp.basic.Icon(
-                                        vectorResource(Res.drawable.swap_horiz_24px),
-                                        stringResource(Res.string.action_select_table),
-                                        tint = customTextColor
-                                    )
-                                }
-                                ScheduleTopBarIconButton(
-                                    fraction = glassFraction,
-                                    onClick = { showMoreMenu = true },
-                                    modifier = Modifier.offset {
-                                        val f = if (showMoreMenu) 1f else 0f
-                                        androidx.compose.ui.unit.IntOffset(
-                                            x = (-24 * f).dp.roundToPx(),
-                                            y = (20 * f).dp.roundToPx()
-                                        )
-                                    }
-                                ) {
-                                    top.yukonga.miuix.kmp.basic.Icon(
-                                        vectorResource(Res.drawable.more_vert_24px),
-                                        "更多",
-                                        tint = customTextColor
-                                    )
-                                }
-                                }
-                            }
-                        }
-                    } else CenterAlignedTopAppBar(
+                topBar = {
+                    CenterAlignedTopAppBar(
                         title = {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -421,13 +290,16 @@ private fun LegacyWeeklyScheduleScreen(
                 }
             ) { scaffoldInnerPadding ->
 
+                val dynamicBottomPadding = scaffoldInnerPadding.calculateBottomPadding() + totalBottomOffset
+
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
                         .padding(
                             start = scaffoldInnerPadding.calculateStartPadding(LayoutDirection.Ltr),
                             top = scaffoldInnerPadding.calculateTopPadding(),
-                            end = scaffoldInnerPadding.calculateEndPadding(LayoutDirection.Ltr)
+                            end = scaffoldInnerPadding.calculateEndPadding(LayoutDirection.Ltr),
+                            bottom = dynamicBottomPadding
                         )
                         .fillMaxSize(),
                     beyondViewportPageCount = 1,
@@ -620,8 +492,7 @@ private fun LegacyWeeklyScheduleScreen(
                         viewState = gridViewState,
                         actions = gridActions,
                         style = composedStyle,
-                        modifier = Modifier,
-                        bottomContentPadding = scheduleBottomScrollPadding
+                        modifier = Modifier
                     )
                 }
             }
@@ -665,43 +536,6 @@ private fun LegacyWeeklyScheduleScreen(
         )
     }
 
-    if (useMiuix && showMoreMenu) {
-        val density = LocalDensity.current
-        Popup(
-            alignment = Alignment.TopEnd,
-            offset = with(density) {
-                androidx.compose.ui.unit.IntOffset(
-                    x = (-12).dp.roundToPx(),
-                    y = 96.dp.roundToPx()
-                )
-            },
-            onDismissRequest = { showMoreMenu = false },
-            properties = PopupProperties(focusable = true, dismissOnBackPress = true)
-        ) {
-            Column(
-                modifier = Modifier
-                    .width(200.dp)
-                    .shadow(12.dp, androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                    .background(MiuixTheme.colorScheme.surfaceContainer)
-                    .padding(vertical = 8.dp)
-            ) {
-                ScheduleMoreMenuItem(Res.drawable.double_arrow_24px, "跳转周数") {
-                    showMoreMenu = false
-                    showWeekSelector = true
-                }
-                ScheduleMoreMenuItem(Res.drawable.archive_24px, "课程管理") {
-                    showMoreMenu = false
-                    onNavigate(Destination.CourseManagementList)
-                }
-                ScheduleMoreMenuItem(Res.drawable.palette_24px, "课表外观") {
-                    showMoreMenu = false
-                    onNavigate(Destination.StyleSettings)
-                }
-            }
-        }
-    }
-
     // 课程详情弹窗
     if (selectedBlockForDetail != null) {
         CourseDetailBottomSheet(
@@ -713,39 +547,4 @@ private fun LegacyWeeklyScheduleScreen(
             }
         )
     }
-}
-
-@Composable
-private fun ScheduleTopBarIconButton(
-    fraction: Float,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    val f = fraction.coerceIn(0f, 1f)
-    AndroidLiquidGlassButton(
-        fraction = f,
-        onClick = onClick,
-        modifier = modifier.shadow((2f * f).dp, CircleShape, clip = false),
-        content = content
-    )
-}
-
-@Composable
-private fun ScheduleMoreMenuItem(
-    icon: org.jetbrains.compose.resources.DrawableResource,
-    title: String,
-    onClick: () -> Unit
-) {
-    top.yukonga.miuix.kmp.basic.BasicComponent(
-        title = title,
-        onClick = onClick,
-        startAction = {
-            top.yukonga.miuix.kmp.basic.Icon(
-                vectorResource(icon),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.primary
-            )
-        }
-    )
 }

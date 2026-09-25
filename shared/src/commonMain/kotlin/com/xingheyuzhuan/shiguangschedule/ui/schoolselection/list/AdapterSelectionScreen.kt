@@ -155,12 +155,7 @@ fun AdapterSelectionScreen(
                                     onNavigate(
                                         Destination.WebView(
                                             initialUrl = initialUrl,
-                                            assetJsPath = assetJsPath,
-                                            completionDestination = if (selectedAdapter.adapter_id.contains("GRADE", ignoreCase = true)) {
-                                                "grade"
-                                            } else {
-                                                "course"
-                                            }
+                                            assetJsPath = assetJsPath
                                         )
                                     )
                                 }

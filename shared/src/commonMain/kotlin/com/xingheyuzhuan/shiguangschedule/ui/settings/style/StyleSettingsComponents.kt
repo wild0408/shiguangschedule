@@ -703,12 +703,13 @@ fun MiuixSettingsListContent(
     currentStyle: ScheduleGridStyleComposed,
     viewModel: StyleSettingsViewModel,
     onWallpaperClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onPick: (isDark: Boolean, index: Int) -> Unit,
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 14.dp),
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         top.yukonga.miuix.kmp.basic.TextButton(
@@ -724,9 +725,7 @@ fun MiuixSettingsListContent(
                 viewModel.updateScheduleMode(if (it) ScheduleModeProto.TIME_24H_MODE else ScheduleModeProto.SECTION_MODE)
             }
             MiuixStyleSwitchItem(stringResource(Res.string.label_hide_section_time), currentStyle.hideSectionTime, viewModel::updateHideSectionTime)
-            MiuixStyleSwitchItem(stringResource(Res.string.label_hide_date_under_day), currentStyle.hideDateUnderDay, viewModel::updateHideDateUnderDay)
             MiuixStyleSwitchItem(stringResource(Res.string.label_hide_grid_lines), currentStyle.hideGridLines, viewModel::updateHideGridLines)
-            MiuixColorPickerItem(stringResource(Res.string.label_page_text_color), currentStyle.pageTextColor, viewModel::updatePageTextColor) { viewModel.updatePageTextColor(null) }
         }
 
         MiuixStyleGroup(stringResource(Res.string.style_category_grid_size)) {
@@ -811,7 +810,20 @@ private fun MiuixWallpaperItem(path: String, onClick: () -> Unit, onLongClick: (
                 color = if (hasWallpaper) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
-        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.image_24px), null, tint = if (hasWallpaper) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary)
+        if (hasWallpaper) {
+            AsyncImage(
+                model = path,
+                contentDescription = null,
+                modifier = Modifier.size(width = 52.dp, height = 38.dp).clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            top.yukonga.miuix.kmp.basic.Icon(
+                vectorResource(Res.drawable.image_24px),
+                null,
+                tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
     }
 }
 
@@ -826,12 +838,27 @@ private fun MiuixStyleSliderItem(
     var showDialog by remember { mutableStateOf(false) }
     var input by remember(value, showDialog) { mutableStateOf(if (stepValue >= 1f) value.toInt().toString() else "%.2f".format(value).trimEnd('0').trimEnd('.')) }
     val steps = (((range.endInclusive - range.start) / stepValue).roundToInt() - 1).coerceAtLeast(0)
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             top.yukonga.miuix.kmp.basic.Text(label, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1)
-            top.yukonga.miuix.kmp.basic.TextButton(input, { showDialog = true })
+            top.yukonga.miuix.kmp.basic.TextButton(
+                text = input,
+                onClick = { showDialog = true },
+                modifier = Modifier.padding(start = 12.dp),
+            )
         }
-        top.yukonga.miuix.kmp.basic.Slider(value, onValueChange, Modifier.fillMaxWidth(), valueRange = range, steps = steps)
+        Spacer(Modifier.height(8.dp))
+        top.yukonga.miuix.kmp.basic.Slider(
+            value,
+            onValueChange,
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            valueRange = range,
+            steps = steps,
+        )
     }
     top.yukonga.miuix.kmp.overlay.OverlayDialog(title = label, summary = "${stringResource(Res.string.label_range)}: ${range.start} - ${range.endInclusive}", show = showDialog, onDismissRequest = { showDialog = false }) {
         Column(Modifier.fillMaxWidth()) {

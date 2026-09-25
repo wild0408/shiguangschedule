@@ -32,8 +32,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -115,11 +113,13 @@ fun DeveloperModeSettingItem(
                 onClick = { onDeveloperModeChanged(!isDeveloperModeEnabled) },
                 showDivider = false,
                 trailingContent = {
-                    if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.Switch(checked = isDeveloperModeEnabled, onCheckedChange = { onDeveloperModeChanged(it) })
-                    else Switch(checked = isDeveloperModeEnabled, onCheckedChange = { onDeveloperModeChanged(it) })
+                    Switch(
+                        checked = isDeveloperModeEnabled,
+                        onCheckedChange = { onDeveloperModeChanged(it) }
+                    )
                 }
             )
-            if (LocalUiStyle.current != AppUiStyle.MIUIX) HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),

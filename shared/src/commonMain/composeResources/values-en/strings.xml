@@ -591,5 +591,21 @@
     <string name="backup_err_restore_failed_prefix">Restore failed: %1$s</string>
     <string name="backup_target_webdav">WebDAV Cloud Sync</string>
     <string name="backup_target_local_zip">Local ZIP File</string>
+    <string name="action_new_course">New course</string>
+    <string name="action_copy_course">Copy course</string>
+    <string name="action_paste_course">Paste course</string>
+    <string name="action_edit_course">Edit course</string>
+    <string name="action_adjust_course_time">Adjust time</string>
+    <string name="toast_course_copied">Course copied</string>
+    <string name="toast_no_course_to_paste">No course to paste</string>
+    <string name="toast_course_pasted">Course pasted</string>
+    <string name="toast_course_time_overlap">Course times overlap</string>
+    <string name="toast_course_outside_semester_add">Courses cannot be added outside the semester</string>
+    <string name="toast_course_outside_semester_adjust">Courses cannot be adjusted outside the semester</string>
+    <string name="toast_course_adjust_saved">Course adjustment saved</string>
+    <string name="toast_course_adjust_failed">Course adjustment failed</string>
+    <string name="toast_no_course_table">No course table is available</string>
+    <string name="toast_invalid_paste_target">Cannot paste at this position</string>
+    <string name="toast_paste_failed">Paste failed: %1$s</string>
 
 </resources>

@@ -5,10 +5,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,27 +23,20 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xingheyuzhuan.shiguangschedule.Destination
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
-import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import shiguangschedule.shared.generated.resources.Res
 import shiguangschedule.shared.generated.resources.account_circle_24px
 import shiguangschedule.shared.generated.resources.account_circle_filled_24px
 import shiguangschedule.shared.generated.resources.nav_course_schedule
-import shiguangschedule.shared.generated.resources.nav_service
 import shiguangschedule.shared.generated.resources.nav_settings
 import shiguangschedule.shared.generated.resources.nav_today_schedule
-import shiguangschedule.shared.generated.resources.service_24px
-import shiguangschedule.shared.generated.resources.service_filled_24px
 import shiguangschedule.shared.generated.resources.view_agenda_24px
 import shiguangschedule.shared.generated.resources.view_agenda_filled_24px
 import shiguangschedule.shared.generated.resources.view_week_24px
@@ -88,12 +77,6 @@ fun AdaptiveNavigationScaffold(
             unselectedIcon = vectorResource(Res.drawable.view_week_24px)
         ),
         NavItemData(
-            label = stringResource(Res.string.nav_service),
-            destination = Destination.Service,
-            selectedIcon = vectorResource(Res.drawable.service_filled_24px),
-            unselectedIcon = vectorResource(Res.drawable.service_24px)
-        ),
-        NavItemData(
             label = stringResource(Res.string.nav_settings),
             destination = Destination.Settings,
             selectedIcon = vectorResource(Res.drawable.account_circle_filled_24px),
@@ -106,7 +89,6 @@ fun AdaptiveNavigationScaffold(
 
     val finalContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
     val finalSubTextColor = finalContentColor.copy(alpha = 0.7f)
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     val itemColors: NavigationSuiteItemColors = NavigationSuiteDefaults.itemColors(
         navigationBarItemColors = NavigationBarItemDefaults.colors(
@@ -135,17 +117,7 @@ fun AdaptiveNavigationScaffold(
         when (layoutType) {
             NavigationSuiteType.NavigationRail -> {
                 Row(modifier = Modifier.fillMaxSize()) {
-                    if (useMiuix) {
-                        top.yukonga.miuix.kmp.basic.NavigationRail(
-                            modifier = Modifier.fillMaxHeight(),
-                            color = if (isTransparent) Color.Transparent else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                        ) {
-                            navItems.forEach { item ->
-                                val selected = currentDestination::class == item.destination::class
-                                top.yukonga.miuix.kmp.basic.NavigationRailItem(selected = selected, onClick = { if (!selected) onTabSelected(item.destination) }, icon = if (selected) item.selectedIcon else item.unselectedIcon, label = item.label)
-                            }
-                        }
-                    } else NavigationRail(
+                    NavigationRail(
                         containerColor = if (isTransparent) Color.Transparent else MaterialTheme.colorScheme.surface,
                         modifier = Modifier.fillMaxHeight()
                     ) {
@@ -172,36 +144,7 @@ fun AdaptiveNavigationScaffold(
                 }
             }
             NavigationSuiteType.NavigationBar -> {
-                if (useMiuix) {
-                    top.yukonga.miuix.kmp.basic.Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        containerColor = Color.Transparent,
-                        bottomBar = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                contentAlignment = androidx.compose.ui.Alignment.Center,
-                            ) {
-                                top.yukonga.miuix.kmp.basic.NavigationBar(
-                                    color = if (isTransparent) Color.Transparent else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer,
-                                    modifier = navigationModifier
-                                        .fillMaxWidth(0.96f)
-                                        .height(64.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)),
-                                    showDivider = false,
-                                    defaultWindowInsetsPadding = false,
-                                ) {
-                                    navItems.forEach { item ->
-                                        val selected = currentDestination::class == item.destination::class
-                                        MiuixNavigationBarItem(selected = selected, onClick = { if (!selected) onTabSelected(item.destination) }, icon = if (selected) item.selectedIcon else item.unselectedIcon, label = item.label)
-                                    }
-                                }
-                            }
-                        },
-                    ) { innerPadding -> content(innerPadding) }
-                } else Scaffold(
+                Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent,
                     bottomBar = {

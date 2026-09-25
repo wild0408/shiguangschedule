@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -43,7 +46,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
@@ -136,60 +138,67 @@ fun StyleSettingsScreen(
             }
             return
         }
-        val miuixScrollBehavior = top.yukonga.miuix.kmp.basic.MiuixScrollBehavior()
         val previewContent = @Composable { modifier: Modifier ->
-            val density = LocalDensity.current
-            val windowWidthDp = with(density) { containerSize.width.toDp() }
             Box(
                 modifier = modifier
-                    .background(MiuixTheme.colorScheme.surfaceContainerHigh)
-                    .horizontalScroll(rememberScrollState())
-                    .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MiuixTheme.colorScheme.surfaceContainerHigh),
             ) {
-                Box(Modifier.requiredWidth(windowWidthDp)) { ScheduleGridContent(currentStyle, demoUiState) }
+                Box(Modifier.fillMaxWidth()) {
+                    MiuixStylePreview(currentStyle, demoUiState)
+                }
             }
         }
 
-        top.yukonga.miuix.kmp.basic.Scaffold(
-            modifier = Modifier.nestedScroll(miuixScrollBehavior.nestedScrollConnection),
-            containerColor = MiuixTheme.colorScheme.surface,
-            topBar = {
-                top.yukonga.miuix.kmp.basic.TopAppBar(
-                    title = stringResource(Res.string.item_personalization),
-                    largeTitle = stringResource(Res.string.item_personalization),
-                    color = MiuixTheme.colorScheme.surface,
-                    scrollBehavior = miuixScrollBehavior,
-                    navigationIcon = {
-                        top.yukonga.miuix.kmp.basic.IconButton(onBack) {
-                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = MiuixTheme.colorScheme.onSurface)
-                        }
-                    },
-                    defaultWindowInsetsPadding = true,
-                )
-            }
+        MiuixStyleSettingsScaffold(
+            title = stringResource(Res.string.item_personalization),
+            onBack = onBack,
         ) { paddingValues ->
             val contentModifier = Modifier.padding(paddingValues).fillMaxSize()
             if (isLandscape) {
                 Row(contentModifier) {
-                    previewContent(Modifier.fillMaxHeight().weight(0.42f))
-                    top.yukonga.miuix.kmp.basic.Card(
-                        modifier = Modifier.fillMaxHeight().weight(0.58f).padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                        insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    previewContent(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(0.44f)
+                            .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                    )
+                    Column(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(0.56f)
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        MiuixSettingsListContent(currentStyle, viewModel, { fileManager.pickImage() }) { dark, index ->
-                            isDarkTarget = dark; selectedColorIndex = index; showColorPicker = true
+                        MiuixSettingsListContent(
+                            currentStyle,
+                            viewModel,
+                            { fileManager.pickImage() },
+                            modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
+                        ) { dark, index ->
+                            isDarkTarget = dark
+                            selectedColorIndex = index
+                            showColorPicker = true
                         }
                     }
                 }
             } else {
                 Column(contentModifier) {
-                    previewContent(Modifier.fillMaxWidth().weight(0.38f))
-                    top.yukonga.miuix.kmp.basic.Card(
-                        modifier = Modifier.fillMaxWidth().weight(0.62f).padding(start = 12.dp, end = 12.dp, top = 12.dp),
-                        insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
-                    ) {
-                        MiuixSettingsListContent(currentStyle, viewModel, { fileManager.pickImage() }) { dark, index ->
-                            isDarkTarget = dark; selectedColorIndex = index; showColorPicker = true
+                    previewContent(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                    )
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                        MiuixSettingsListContent(
+                            currentStyle,
+                            viewModel,
+                            { fileManager.pickImage() },
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        ) { dark, index ->
+                            isDarkTarget = dark
+                            selectedColorIndex = index
+                            showColorPicker = true
                         }
                     }
                 }

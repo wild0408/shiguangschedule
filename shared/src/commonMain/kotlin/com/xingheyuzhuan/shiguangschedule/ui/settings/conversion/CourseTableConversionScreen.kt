@@ -3,7 +3,6 @@ package com.xingheyuzhuan.shiguangschedule.ui.settings.conversion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,11 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.di.AppStorage
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.tool.FileManagerCallbacks
 import com.xingheyuzhuan.shiguangschedule.tool.rememberFileManager
 import com.xingheyuzhuan.shiguangschedule.ui.components.ShareDialog
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 import okio.Buffer
 import okio.FileSystem
@@ -88,7 +85,6 @@ fun CourseTableConversionScreen(
     appStorage: AppStorage = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -170,20 +166,9 @@ fun CourseTableConversionScreen(
     }
 
     Scaffold(
-        containerColor = if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
             Column {
-                if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
-                    title = stringResource(Res.string.title_conversion),
-                    largeTitle = stringResource(Res.string.title_conversion),
-                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface,
-                    defaultWindowInsetsPadding = true,
-                    navigationIcon = {
-                        top.yukonga.miuix.kmp.basic.IconButton(onBack) {
-                            top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back), tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface)
-                        }
-                    }
-                ) else TopAppBar(
+                TopAppBar(
                     title = { Text(stringResource(Res.string.title_conversion)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -195,8 +180,11 @@ fun CourseTableConversionScreen(
                     }
                 )
                 if (uiState.isLoading) {
-                    if (useMiuix) top.yukonga.miuix.kmp.basic.LinearProgressIndicator(Modifier.fillMaxWidth())
-                    else LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceVariant)
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 }
             }
         },
@@ -211,56 +199,74 @@ fun CourseTableConversionScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.section_file_conversion)) else Text(stringResource(Res.string.section_file_conversion), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+            Text(stringResource(Res.string.section_file_conversion), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            ConversionGroupCard(useMiuix) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     ConversionRow(
                         title = stringResource(Res.string.item_import_course_file),
                         desc = stringResource(Res.string.desc_import_json),
                         onClick = { viewModel.onImportClick() }
                     )
-                    if (!useMiuix) HorizontalDivider()
+                    HorizontalDivider()
                     ConversionRow(
                         title = stringResource(Res.string.item_export_course_file),
                         desc = stringResource(Res.string.desc_export_json_with_config),
                         onClick = { viewModel.onExportClick() }
                     )
-                    if (!useMiuix) HorizontalDivider()
+                    HorizontalDivider()
                     ConversionRow(
                         title = stringResource(Res.string.item_export_ics_file),
                         desc = stringResource(Res.string.desc_export_ics_with_alarm),
                         onClick = { viewModel.onExportIcsClick() }
                     )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.section_school_import)) else Text(stringResource(Res.string.section_school_import), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+            Text(stringResource(Res.string.section_school_import), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            ConversionGroupCard(useMiuix) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     ConversionRow(
                         title = stringResource(Res.string.item_school_system_import),
                         desc = stringResource(Res.string.desc_school_import_quick),
                         onClick = { onNavigate(Destination.SchoolSelectionListScreen) }
                     )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            if (useMiuix) top.yukonga.miuix.kmp.basic.SmallTitle(stringResource(Res.string.section_sync)) else Text(stringResource(Res.string.section_sync), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+            Text(stringResource(Res.string.section_sync), style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
-            ConversionGroupCard(useMiuix) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     ConversionRow(
                         title = stringResource(Res.string.item_sync_to_system_calendar),
                         desc = stringResource(Res.string.desc_sync_to_system_calendar),
                         onClick = { viewModel.onSyncToCalendarClick() }
                     )
-                    if (!useMiuix) HorizontalDivider()
+                    HorizontalDivider()
                     ConversionRow(
                         title = stringResource(Res.string.item_backup_restore),
                         desc = stringResource(Res.string.desc_backup_restore),
                         onClick = { onNavigate(Destination.BackupAndRestore) }
                     )
+                }
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -294,22 +300,6 @@ private fun ConversionRow(
     desc: String,
     onClick: () -> Unit
 ) {
-    if (LocalUiStyle.current == AppUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.basic.BasicComponent(
-            modifier = Modifier.fillMaxWidth(),
-            title = title,
-            summary = desc,
-            onClick = onClick,
-            endActions = {
-                top.yukonga.miuix.kmp.basic.Icon(
-                    vectorResource(Res.drawable.chevron_right_24px),
-                    stringResource(Res.string.a11y_details),
-                    tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions
-                )
-            }
-        )
-        return
-    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -319,35 +309,14 @@ private fun ConversionRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.Text(title, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1) else Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(4.dp))
-            if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.basic.Text(desc, style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary) else Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(
             imageVector = vectorResource(Res.drawable.chevron_right_24px),
             contentDescription = stringResource(Res.string.a11y_details),
-            tint = if (LocalUiStyle.current == AppUiStyle.MIUIX) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary else MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun ConversionGroupCard(useMiuix: Boolean, content: @Composable ColumnScope.() -> Unit) {
-    if (useMiuix) {
-        top.yukonga.miuix.kmp.basic.Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
-                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer
-            ),
-            content = content
-        )
-    } else {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp), content = content)
-        }
     }
 }

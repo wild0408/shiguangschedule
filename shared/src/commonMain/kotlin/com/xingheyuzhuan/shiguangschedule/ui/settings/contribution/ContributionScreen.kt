@@ -38,9 +38,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.xingheyuzhuan.shiguangschedule.data.model.ContributionList
-import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
-import com.xingheyuzhuan.shiguangschedule.ui.theme.LocalUiStyle
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -72,26 +69,17 @@ fun ContributionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
     val uriHandler = LocalUriHandler.current
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     Scaffold(
-        containerColor = if (useMiuix) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.background,
         topBar = {
-            if (useMiuix) top.yukonga.miuix.kmp.basic.TopAppBar(
-                title = stringResource(Res.string.title_contribution_list),
-                largeTitle = stringResource(Res.string.title_contribution_list),
-                color = MiuixTheme.colorScheme.surface,
-                navigationIcon = {
-                    top.yukonga.miuix.kmp.basic.IconButton(onBack) {
-                        top.yukonga.miuix.kmp.basic.Icon(vectorResource(Res.drawable.arrow_back_24px), stringResource(Res.string.a11y_back_to_previous), tint = MiuixTheme.colorScheme.onSurface)
-                    }
-                },
-                defaultWindowInsetsPadding = true,
-            ) else TopAppBar(
+            TopAppBar(
                 title = { Text(stringResource(Res.string.title_contribution_list)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = vectorResource(Res.drawable.arrow_back_24px), contentDescription = stringResource(Res.string.a11y_back_to_previous))
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.arrow_back_24px),
+                            contentDescription = stringResource(Res.string.a11y_back_to_previous)
+                        )
                     }
                 }
             )
@@ -104,8 +92,7 @@ fun ContributionScreen(
         ) {
             ContributionTabs(
                 selectedTabIndex = selectedTabIndex,
-                onTabSelected = viewModel::selectTab,
-                useMiuix = useMiuix
+                onTabSelected = viewModel::selectTab
             )
 
             Box(
@@ -116,8 +103,7 @@ fun ContributionScreen(
             ) {
                 when (val state = uiState) {
                     ContributionUiState.Loading -> {
-                        if (useMiuix) top.yukonga.miuix.kmp.basic.CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        else CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
 
                     is ContributionUiState.Error -> {
@@ -140,7 +126,6 @@ fun ContributionScreen(
                         }
                         ContributorListContent(
                             list = listToShow,
-                            useMiuix = useMiuix,
                             onContributorClick = { url ->
                                 uriHandler.openUri(url)
                             }
@@ -159,22 +144,14 @@ fun ContributionScreen(
 @Composable
 fun ContributionTabs(
     selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    useMiuix: Boolean
+    onTabSelected: (Int) -> Unit
 ) {
     val tabs = listOf(
         stringResource(Res.string.tab_adapter_development),
         stringResource(Res.string.tab_app_development)
     )
 
-    if (useMiuix) {
-        top.yukonga.miuix.kmp.basic.TabRow(
-            tabs = tabs,
-            selectedTabIndex = selectedTabIndex,
-            onTabSelected = onTabSelected,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-    } else PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
+    PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
         tabs.forEachIndexed { index, title ->
             Tab(
                 selected = selectedTabIndex == index,
@@ -200,17 +177,13 @@ fun ContributionTabs(
 @Composable
 fun ContributorListContent(
     list: List<ContributionList.Contributor>,
-    useMiuix: Boolean,
     onContributorClick: (String) -> Unit
 ) {
     if (list.isEmpty()) {
-        val emptyText = stringResource(Res.string.text_no_contributors)
-        if (useMiuix) top.yukonga.miuix.kmp.basic.Text(
-            text = emptyText,
-            style = MiuixTheme.textStyles.body1,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.padding(top = 24.dp)
-        ) else Text(text = emptyText, modifier = Modifier.padding(top = 16.dp))
+        Text(
+            text = stringResource(Res.string.text_no_contributors),
+            modifier = Modifier.padding(top = 16.dp)
+        )
         return
     }
 
@@ -218,7 +191,6 @@ fun ContributorListContent(
         items(list, key = { it.url }) { contributor ->
             ContributorCard(
                 contributor = contributor,
-                useMiuix = useMiuix,
                 onContributorClick = onContributorClick
             )
         }
@@ -232,7 +204,6 @@ fun ContributorListContent(
 @Composable
 fun ContributorCard(
     contributor: ContributionList.Contributor,
-    useMiuix: Boolean,
     onContributorClick: (String) -> Unit
 ) {
     val a11yAvatar = stringResource(Res.string.a11y_contributor_avatar, contributor.name)
@@ -246,46 +217,36 @@ fun ContributorCard(
         }
     }
 
-    if (useMiuix) top.yukonga.miuix.kmp.basic.Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        onClick = { onContributorClick(contributor.url) },
-    ) {
-        ContributorRow(avatarBytes, a11yAvatar, contributor.name, labelGithub, true)
-    } else Card(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable { onContributorClick(contributor.url) }
     ) {
-        ContributorRow(avatarBytes, a11yAvatar, contributor.name, labelGithub, false)
-    }
-}
-
-@Composable
-private fun ContributorRow(
-    avatarBytes: ByteArray?,
-    avatarDescription: String,
-    name: String,
-    trailing: String,
-    useMiuix: Boolean,
-) {
-    Row(
-        modifier = if (useMiuix) Modifier.fillMaxWidth() else Modifier.padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = avatarBytes,
-            contentDescription = avatarDescription,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(44.dp).clip(CircleShape)
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        if (useMiuix) top.yukonga.miuix.kmp.basic.Text(name, style = MiuixTheme.textStyles.body1)
-        else Text(name, style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.weight(1f))
-        if (useMiuix) top.yukonga.miuix.kmp.basic.Text(trailing, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-        else Text(trailing, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = avatarBytes,
+                contentDescription = a11yAvatar,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = contributor.name,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = labelGithub,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
     }
 }
 
@@ -299,20 +260,15 @@ fun ErrorMessage(
 ) {
     val textLoadingFailed = stringResource(Res.string.text_loading_failed, message)
     val actionRetry = stringResource(Res.string.action_retry)
-    val useMiuix = LocalUiStyle.current == AppUiStyle.MIUIX
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        if (useMiuix) {
-            top.yukonga.miuix.kmp.basic.Text(
-                text = textLoadingFailed,
-                color = MiuixTheme.colorScheme.error,
-                style = MiuixTheme.textStyles.body1,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            top.yukonga.miuix.kmp.basic.Button(onClick = onRetry) { top.yukonga.miuix.kmp.basic.Text(actionRetry) }
-        } else {
-            Text(text = textLoadingFailed, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
-            Button(onClick = onRetry) { Text(actionRetry) }
+        Text(
+            text = textLoadingFailed,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Button(onClick = onRetry) {
+            Text(actionRetry)
         }
     }
 }

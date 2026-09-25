@@ -591,5 +591,21 @@
     <string name="backup_err_restore_failed_prefix">還原失敗: %1$s</string>
     <string name="backup_target_webdav">WebDAV 雲端同步</string>
     <string name="backup_target_local_zip">本地 ZIP 檔案</string>
+    <string name="action_new_course">新增課程</string>
+    <string name="action_copy_course">複製課程</string>
+    <string name="action_paste_course">貼上課程</string>
+    <string name="action_edit_course">編輯課程</string>
+    <string name="action_adjust_course_time">調整時間</string>
+    <string name="toast_course_copied">課程已複製</string>
+    <string name="toast_no_course_to_paste">沒有可貼上的課程</string>
+    <string name="toast_course_pasted">課程已貼上</string>
+    <string name="toast_course_time_overlap">課程時間有重疊</string>
+    <string name="toast_course_outside_semester_add">無法在學期外新增課程</string>
+    <string name="toast_course_outside_semester_adjust">無法在學期外調整課程</string>
+    <string name="toast_course_adjust_saved">課程調整已儲存</string>
+    <string name="toast_course_adjust_failed">課程調整失敗</string>
+    <string name="toast_no_course_table">目前沒有可用課表</string>
+    <string name="toast_invalid_paste_target">無法貼上到此位置</string>
+    <string name="toast_paste_failed">貼上失敗：%1$s</string>
 
 </resources>

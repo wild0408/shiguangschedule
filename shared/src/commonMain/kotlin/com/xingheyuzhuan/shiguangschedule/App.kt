@@ -13,7 +13,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -81,13 +84,17 @@ fun AppNavigation(startDestination: Destination) {
         configuration = navSavedStateConfig,
         startDestination
     )
+    var selectedMainDestination by remember { mutableStateOf(startDestination) }
 
     val onNavigate: (Destination) -> Unit = remember(backStack) {
         { dest ->
             if (dest.isMainScreen) {
-                if (backStack.lastOrNull() != dest) {
-                    backStack.clear()
-                    backStack.add(dest)
+                // Keep one stable root entry and switch the visible main page
+                // inside it. Clearing and recreating the root used to dispose
+                // the page composition on every bottom-bar tap.
+                selectedMainDestination = dest
+                while (backStack.size > 1) {
+                    backStack.removeAt(backStack.lastIndex)
                 }
             } else {
                 if (backStack.lastOrNull() != dest) {
@@ -103,6 +110,23 @@ fun AppNavigation(startDestination: Destination) {
                 backStack.removeAt(backStack.lastIndex)
             }
         }
+    }
+
+    // Movable content keeps each first-level page's remembered UI state while
+    // only the selected page is placed. Unselected pages are not composed on
+    // cold start, so this does not turn navigation into a four-page startup
+    // cost.
+    val courseScheduleContent = remember {
+        movableContentOf { WeeklyScheduleScreen(onNavigate, onBack) }
+    }
+    val todayScheduleContent = remember {
+        movableContentOf { TodayScheduleScreen(onNavigate, onBack) }
+    }
+    val serviceContent = remember {
+        movableContentOf { ServiceScreen(onNavigate, onBack) }
+    }
+    val settingsContent = remember {
+        movableContentOf { SettingsScreen(onNavigate, onBack) }
     }
 
     val animSpec = tween<IntOffset>(300)
@@ -150,13 +174,40 @@ fun AppNavigation(startDestination: Destination) {
             }
         ) {
             Surface(modifier = Modifier.fillMaxSize()) {
-                ScreenContent(
-                    targetDest = destination,
-                    onNavigate = onNavigate,
-                    onBack = onBack
-                )
+                if (destination.isMainScreen) {
+                    MainScreenHost(
+                        selectedDestination = selectedMainDestination,
+                        courseScheduleContent = courseScheduleContent,
+                        todayScheduleContent = todayScheduleContent,
+                        serviceContent = serviceContent,
+                        settingsContent = settingsContent
+                    )
+                } else {
+                    ScreenContent(
+                        targetDest = destination,
+                        onNavigate = onNavigate,
+                        onBack = onBack
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun MainScreenHost(
+    selectedDestination: Destination,
+    courseScheduleContent: @Composable () -> Unit,
+    todayScheduleContent: @Composable () -> Unit,
+    serviceContent: @Composable () -> Unit,
+    settingsContent: @Composable () -> Unit,
+) {
+    when (selectedDestination) {
+        Destination.CourseSchedule -> courseScheduleContent()
+        Destination.TodaySchedule -> todayScheduleContent()
+        Destination.Service -> serviceContent()
+        Destination.Settings -> settingsContent()
+        else -> courseScheduleContent()
     }
 }
 

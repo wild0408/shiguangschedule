@@ -612,4 +612,20 @@
     <string name="ui_style_label">界面风格</string>
     <string name="ui_style_miuix">Miuix</string>
     <string name="ui_style_material">Material</string>
+    <string name="action_new_course">新建课程</string>
+    <string name="action_copy_course">复制课程</string>
+    <string name="action_paste_course">粘贴课程</string>
+    <string name="action_edit_course">编辑课程</string>
+    <string name="action_adjust_course_time">调整时间</string>
+    <string name="toast_course_copied">课程已复制</string>
+    <string name="toast_no_course_to_paste">没有可粘贴的课程</string>
+    <string name="toast_course_pasted">课程已粘贴</string>
+    <string name="toast_course_time_overlap">课程时间存在重叠</string>
+    <string name="toast_course_outside_semester_add">无法在学期外添加课程</string>
+    <string name="toast_course_outside_semester_adjust">无法在学期外调整课程</string>
+    <string name="toast_course_adjust_saved">课程调整已保存</string>
+    <string name="toast_course_adjust_failed">课程调整失败</string>
+    <string name="toast_no_course_table">当前没有可用课表</string>
+    <string name="toast_invalid_paste_target">无法粘贴到此位置</string>
+    <string name="toast_paste_failed">粘贴失败：%1$s</string>
 </resources>

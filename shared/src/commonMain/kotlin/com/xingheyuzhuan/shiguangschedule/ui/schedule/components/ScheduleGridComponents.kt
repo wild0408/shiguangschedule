@@ -164,8 +164,7 @@ fun DayHeader(
     lineColor: Color,
     textColor: Color,
     subTextColor: Color,
-    strokeWidthPx: Float,
-    useMiuix: Boolean = false
+    strokeWidthPx: Float
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth().height(style.dayHeaderHeight)) {
         val shouldShowDate = !style.hideDateUnderDay && maxHeight >= 42.dp
@@ -230,10 +229,7 @@ fun DayHeader(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(
-                                if (index == todayIndex && !useMiuix) MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
-                                else Color.Transparent
-                            ),
+                            .background(if (index == todayIndex) MaterialTheme.colorScheme.primaryContainer.copy(0.4f) else Color.Transparent),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -247,7 +243,7 @@ fun DayHeader(
                                 text = day,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                    color = if (index == todayIndex && useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else textColor,
+                                color = textColor,
                                 maxLines = 1,
                                 style = TextStyle(
                                     lineHeight = 16.sp
@@ -259,7 +255,7 @@ fun DayHeader(
                                 Text(
                                     text = dates[index],
                                     fontSize = 10.sp,
-                                    color = if (index == todayIndex && useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else subTextColor,
+                                    color = subTextColor,
                                     maxLines = 1,
                                     style = TextStyle(
                                         lineHeight = 12.sp
@@ -290,9 +286,10 @@ fun TimeColumn(
     textColor: Color,
     subTextColor: Color,
     strokeWidthPx: Float,
+    activeTextColor: Color = MaterialTheme.colorScheme.primary,
+    showActiveBackground: Boolean = true,
     activeDragHour: Int? = null,
-    activeDragMinuteStr: String? = null,
-    useMiuix: Boolean = false
+    activeDragMinuteStr: String? = null
 ) {
     val currentHour = remember {
         try {
@@ -316,8 +313,11 @@ fun TimeColumn(
                     .height(style.sectionHeight)
                     .clickable { onTimeSlotClicked() }
                     .background(
-                        if (isCurrentHourActive && !useMiuix) MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
-                        else Color.Transparent
+                        if (isCurrentHourActive && showActiveBackground) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(0.4f)
+                        } else {
+                            Color.Transparent
+                        }
                     )
                     .drawBehind {
                         if (!style.hideGridLines) {
@@ -339,7 +339,7 @@ fun TimeColumn(
                             text = ":$activeDragMinuteStr",
                             fontSize = if (h < 32.dp) 11.sp else 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = textColor
+                            color = if (isCurrentHourActive) activeTextColor else textColor
                         )
                     }
                 }
@@ -357,29 +357,38 @@ fun TimeColumn(
                             text = formatHourStr,
                             fontSize = if (h < 32.dp) 11.sp else 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isCurrentHourActive) {
-                                if (useMiuix) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
-                            } else textColor
+                            color = if (isCurrentHourActive) MaterialTheme.colorScheme.primary else textColor
                         )
                     } else {
                         val slot = timeSlots.getOrNull(index)
                         if (slot != null) {
                             Text(
                                 text = slot.alias ?: slot.number.toString(),
-                                fontSize = if (h < 32.dp) 11.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor,
+                            fontSize = if (h < 32.dp) 11.sp else 14.sp,
+                            fontWeight = FontWeight.Bold,
+                                color = if (isCurrentHourActive) activeTextColor else textColor,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (!style.hideSectionTime) {
                                 when {
                                     h >= 52.dp -> {
                                         Spacer(Modifier.height(2.dp))
-                                        TimeText(slot.startTime, subTextColor)
-                                        TimeText(slot.endTime, subTextColor)
+                                        TimeText(
+                                            slot.startTime,
+                                            if (isCurrentHourActive) activeTextColor else subTextColor,
+                                        )
+                                        TimeText(
+                                            slot.endTime,
+                                            if (isCurrentHourActive) activeTextColor else subTextColor,
+                                        )
                                     }
                                     h >= 38.dp -> {
-                                        Text(text = "${slot.startTime}-${slot.endTime}", fontSize = 8.sp, color = subTextColor, maxLines = 1)
+                                        Text(
+                                            text = "${slot.startTime}-${slot.endTime}",
+                                            fontSize = 8.sp,
+                                            color = if (isCurrentHourActive) activeTextColor else subTextColor,
+                                            maxLines = 1,
+                                        )
                                     }
                                 }
                             }
