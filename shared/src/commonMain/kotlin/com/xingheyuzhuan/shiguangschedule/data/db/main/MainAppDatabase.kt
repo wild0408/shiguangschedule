@@ -3,6 +3,7 @@ package com.xingheyuzhuan.shiguangschedule.data.db.main
 import androidx.room3.AutoMigration
 import androidx.room3.ConstructedBy
 import androidx.room3.Database
+import androidx.room3.DeleteTable
 import androidx.room3.RoomDatabase
 import androidx.room3.RoomDatabaseConstructor
 import androidx.room3.migration.AutoMigrationSpec
@@ -14,23 +15,26 @@ import com.xingheyuzhuan.shiguangschedule.data.di.AppStorage
         Course::class,
         CourseWeek::class,
         TimeSlot::class,
-        CourseTableConfig::class
-        ,GradeEntity::class,
+        CourseTableConfig::class,
+        TimeTable::class,
+        CourseTimeBinding::class,
+        TimeTableCombo::class,
+        TimeTableComboRule::class,
+        GradeEntity::class,
         ElectricityHistory::class
     ],
     version = 7,
     autoMigrations = [
         AutoMigration(from = 3, to = 4),
-        AutoMigration(from = 4, to = 5, spec = MainAppDatabase.RemoveAppSettingsSpec::class)
-        ,AutoMigration(from = 5, to = 6)
-        ,AutoMigration(from = 6, to = 7)
+        AutoMigration(from = 4, to = 5, spec = MainAppDatabase.RemoveAppSettingsSpec::class),
+        AutoMigration(from = 6, to = 7)
     ],
     exportSchema = true
 )
 @ConstructedBy(MainAppDatabaseConstructor::class)
 abstract class MainAppDatabase : RoomDatabase() {
 
-    @androidx.room3.DeleteTable(tableName = "app_settings")
+    @DeleteTable(tableName = "app_settings")
     class RemoveAppSettingsSpec : AutoMigrationSpec
 
     abstract fun courseTableDao(): CourseTableDao
@@ -38,6 +42,9 @@ abstract class MainAppDatabase : RoomDatabase() {
     abstract fun courseWeekDao(): CourseWeekDao
     abstract fun timeSlotDao(): TimeSlotDao
     abstract fun courseTableConfigDao(): CourseTableConfigDao
+    abstract fun timeTableDao(): TimeTableDao
+    abstract fun courseTimeBindingDao(): CourseTimeBindingDao
+    abstract fun timeTableComboDao(): TimeTableComboDao
     abstract fun gradeDao(): GradeDao
     abstract fun electricityHistoryDao(): ElectricityHistoryDao
 

@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.data.model.AppThemeMode
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 import com.xingheyuzhuan.shiguangschedule.ui.components.AdvancedColorPicker
 import com.xingheyuzhuan.shiguangschedule.ui.components.ColorPickerConfig
 import com.xingheyuzhuan.shiguangschedule.ui.settings.SettingsViewModel
@@ -70,6 +71,7 @@ import shiguangschedule.shared.generated.resources.refresh_24px
 import shiguangschedule.shared.generated.resources.theme_color_hint
 import shiguangschedule.shared.generated.resources.theme_mode_label
 import shiguangschedule.shared.generated.resources.theme_settings_title
+import shiguangschedule.shared.generated.resources.ui_style_label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,6 +125,12 @@ fun ThemeSettingsScreen(
             ThemeModeSelector(
                 selectedMode = settings.themeMode,
                 onModeSelected = { viewModel.onThemeModeChanged(it) }
+            )
+
+            SectionHeader(stringResource(Res.string.ui_style_label))
+            UiStyleSelector(
+                selectedStyle = settings.uiStyle,
+                onStyleSelected = viewModel::onUiStyleChanged,
             )
 
             // 动态取色 (利用跨平台 supportsDynamicColor 统一处理)
@@ -299,4 +307,23 @@ private fun SectionHeader(text: String) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
     )
+}
+
+@Composable
+private fun UiStyleSelector(
+    selectedStyle: AppUiStyle,
+    onStyleSelected: (AppUiStyle) -> Unit,
+) {
+    val styles = AppUiStyle.entries
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        styles.forEachIndexed { index, style ->
+            SegmentedButton(
+                selected = selectedStyle == style,
+                onClick = { onStyleSelected(style) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = styles.size),
+            ) {
+                Text(text = stringResource(style.labelRes), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
 }

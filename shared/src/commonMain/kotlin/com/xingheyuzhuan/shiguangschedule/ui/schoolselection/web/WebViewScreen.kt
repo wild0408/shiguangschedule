@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xingheyuzhuan.shiguangschedule.Destination
 import com.xingheyuzhuan.shiguangschedule.data.repository.CourseConversionRepository
+import com.xingheyuzhuan.shiguangschedule.data.repository.GradeRepository
 import com.xingheyuzhuan.shiguangschedule.ui.components.CourseTablePickerDialog
 import com.xingheyuzhuan.shiguangschedule.ui.components.ToastManager
 import kotlinx.coroutines.channels.Channel
@@ -131,6 +132,7 @@ fun WebViewScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val courseConversionRepository: CourseConversionRepository = koinInject()
+    val gradeRepository: GradeRepository = koinInject()
     val uiEventChannel = remember { Channel<WebUiEvent>(Channel.UNLIMITED) }
     val uiEventsFlow = remember(uiEventChannel) { uiEventChannel.receiveAsFlow() }
 
@@ -139,6 +141,7 @@ fun WebViewScreen(
             coroutineScope = coroutineScope,
             uiEventChannel = uiEventChannel,
             courseConversionRepository = courseConversionRepository,
+            gradeRepository = gradeRepository,
             onTaskCompleted = { onNavigate(Destination.CourseSchedule) },
             evaluateJs = { script, callback ->
                 webViewController.evaluateJavascript(script, callback)

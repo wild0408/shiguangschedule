@@ -11,11 +11,16 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 import com.xingheyuzhuan.shiguangschedule.data.model.AppSettingsModel
 import com.xingheyuzhuan.shiguangschedule.data.model.AppThemeMode
+import com.xingheyuzhuan.shiguangschedule.data.model.AppUiStyle
 
 /**
  * 定义一个用于全局同步深色模式状态的 Local 变量
  */
 val LocalIsDarkTheme = staticCompositionLocalOf { false }
+
+/** UI branch selected at the application root. Android Miuix screens use this
+ * as a read-only marker; Material screens keep the same composition contract. */
+val LocalUiStyle = staticCompositionLocalOf { AppUiStyle.MATERIAL }
 
 /**
  * 外部调用的快捷主题函数
@@ -32,7 +37,10 @@ fun ShiguangScheduleTheme(
         AppThemeMode.DARK -> true
     }
 
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides darkTheme,
+        LocalUiStyle provides settings.uiStyle,
+    ) {
         ShiguangScheduleTheme(
             darkTheme = darkTheme,
             dynamicColor = settings.useDynamicColor,

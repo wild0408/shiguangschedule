@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "3b8880726ede3e27c574a059b5731f23",
+    "identityHash": "30abd17f661e856f56a68122060c9f10",
     "entities": [
       {
         "tableName": "course_tables",
@@ -203,8 +203,14 @@
       },
       {
         "tableName": "time_slots",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`number` INTEGER NOT NULL, `startTime` TEXT NOT NULL, `endTime` TEXT NOT NULL, `courseTableId` TEXT NOT NULL, `alias` TEXT, PRIMARY KEY(`number`, `courseTableId`), FOREIGN KEY(`courseTableId`) REFERENCES `course_tables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`timeTableId` TEXT NOT NULL, `number` INTEGER NOT NULL, `startTime` TEXT NOT NULL, `endTime` TEXT NOT NULL, `alias` TEXT, PRIMARY KEY(`timeTableId`, `number`), FOREIGN KEY(`timeTableId`) REFERENCES `time_tables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "timeTableId",
+            "columnName": "timeTableId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
           {
             "fieldPath": "number",
             "columnName": "number",
@@ -224,12 +230,6 @@
             "notNull": true
           },
           {
-            "fieldPath": "courseTableId",
-            "columnName": "courseTableId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "alias",
             "columnName": "alias",
             "affinity": "TEXT"
@@ -238,28 +238,28 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "number",
-            "courseTableId"
+            "timeTableId",
+            "number"
           ]
         },
         "indices": [
           {
-            "name": "index_time_slots_courseTableId",
+            "name": "index_time_slots_timeTableId",
             "unique": false,
             "columnNames": [
-              "courseTableId"
+              "timeTableId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_slots_courseTableId` ON `${TABLE_NAME}` (`courseTableId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_slots_timeTableId` ON `${TABLE_NAME}` (`timeTableId`)"
           }
         ],
         "foreignKeys": [
           {
-            "table": "course_tables",
+            "table": "time_tables",
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "courseTableId"
+              "timeTableId"
             ],
             "referencedColumns": [
               "id"
@@ -269,7 +269,7 @@
       },
       {
         "tableName": "course_table_config",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`courseTableId` TEXT NOT NULL, `showWeekends` INTEGER NOT NULL, `semesterStartDate` TEXT, `semesterTotalWeeks` INTEGER NOT NULL, `defaultClassDuration` INTEGER NOT NULL, `defaultBreakDuration` INTEGER NOT NULL, `firstDayOfWeek` INTEGER NOT NULL, PRIMARY KEY(`courseTableId`), FOREIGN KEY(`courseTableId`) REFERENCES `course_tables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`courseTableId` TEXT NOT NULL, `showWeekends` INTEGER NOT NULL, `semesterStartDate` TEXT, `semesterTotalWeeks` INTEGER NOT NULL, `firstDayOfWeek` INTEGER NOT NULL, PRIMARY KEY(`courseTableId`), FOREIGN KEY(`courseTableId`) REFERENCES `course_tables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "courseTableId",
@@ -291,18 +291,6 @@
           {
             "fieldPath": "semesterTotalWeeks",
             "columnName": "semesterTotalWeeks",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "defaultClassDuration",
-            "columnName": "defaultClassDuration",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "defaultBreakDuration",
-            "columnName": "defaultBreakDuration",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -345,8 +333,8 @@
         ]
       },
       {
-        "tableName": "grades",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `courseName` TEXT NOT NULL, `courseType` TEXT NOT NULL, `credits` TEXT NOT NULL, `score` TEXT NOT NULL, `gradePoint` TEXT NOT NULL, `semester` TEXT NOT NULL, `status` TEXT, `teacher` TEXT, `examType` TEXT, `scoreComposition` TEXT, PRIMARY KEY(`id`))",
+        "tableName": "time_tables",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT, `createdAt` INTEGER NOT NULL, `defaultClassDuration` INTEGER NOT NULL, `defaultBreakDuration` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -355,60 +343,27 @@
             "notNull": true
           },
           {
-            "fieldPath": "courseName",
-            "columnName": "courseName",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "courseType",
-            "columnName": "courseType",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "credits",
-            "columnName": "credits",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "score",
-            "columnName": "score",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "gradePoint",
-            "columnName": "gradePoint",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "semester",
-            "columnName": "semester",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "status",
-            "columnName": "status",
+            "fieldPath": "name",
+            "columnName": "name",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "teacher",
-            "columnName": "teacher",
-            "affinity": "TEXT"
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
-            "fieldPath": "examType",
-            "columnName": "examType",
-            "affinity": "TEXT"
+            "fieldPath": "defaultClassDuration",
+            "columnName": "defaultClassDuration",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
-            "fieldPath": "scoreComposition",
-            "columnName": "scoreComposition",
-            "affinity": "TEXT"
+            "fieldPath": "defaultBreakDuration",
+            "columnName": "defaultBreakDuration",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -417,11 +372,199 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "course_time_bindings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`courseTableId` TEXT NOT NULL, `targetType` TEXT NOT NULL, `targetId` TEXT NOT NULL, PRIMARY KEY(`courseTableId`), FOREIGN KEY(`courseTableId`) REFERENCES `course_tables`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "courseTableId",
+            "columnName": "courseTableId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetType",
+            "columnName": "targetType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetId",
+            "columnName": "targetId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "courseTableId"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "course_tables",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "courseTableId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "time_table_combos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `baseTimeTableId` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`baseTimeTableId`) REFERENCES `time_tables`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseTimeTableId",
+            "columnName": "baseTimeTableId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_time_table_combos_baseTimeTableId",
+            "unique": false,
+            "columnNames": [
+              "baseTimeTableId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_table_combos_baseTimeTableId` ON `${TABLE_NAME}` (`baseTimeTableId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "time_tables",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "baseTimeTableId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "time_table_combo_rules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `comboId` TEXT NOT NULL, `targetTimeTableId` TEXT NOT NULL, `startDate` TEXT NOT NULL, `endDate` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`comboId`) REFERENCES `time_table_combos`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`targetTimeTableId`) REFERENCES `time_tables`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comboId",
+            "columnName": "comboId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetTimeTableId",
+            "columnName": "targetTimeTableId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDate",
+            "columnName": "startDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDate",
+            "columnName": "endDate",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_time_table_combo_rules_comboId",
+            "unique": false,
+            "columnNames": [
+              "comboId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_table_combo_rules_comboId` ON `${TABLE_NAME}` (`comboId`)"
+          },
+          {
+            "name": "index_time_table_combo_rules_targetTimeTableId",
+            "unique": false,
+            "columnNames": [
+              "targetTimeTableId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_time_table_combo_rules_targetTimeTableId` ON `${TABLE_NAME}` (`targetTimeTableId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "time_table_combos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "comboId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "time_tables",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "targetTimeTableId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3b8880726ede3e27c574a059b5731f23')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '30abd17f661e856f56a68122060c9f10')"
     ]
   }
 }

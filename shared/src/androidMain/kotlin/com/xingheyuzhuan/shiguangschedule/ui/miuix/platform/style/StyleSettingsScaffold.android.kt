@@ -12,6 +12,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.basic.HyperLiquidTopBarButton
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.basic.rememberSharedScrollBehavior
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.chrome.HyperGlassTopBar
+import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.utils.overScrollVertical
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
@@ -27,7 +28,6 @@ actual fun MiuixStyleSettingsScaffold(
     val scrollBehavior = rememberSharedScrollBehavior()
     val backdrop = rememberLayerBackdrop { drawRect(background); drawContent() }
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = background,
         topBar = {
             HyperGlassTopBar(
@@ -51,7 +51,9 @@ actual fun MiuixStyleSettingsScaffold(
             Modifier
                 .fillMaxSize()
                 .background(background)
-                .layerBackdrop(backdrop),
+                .layerBackdrop(backdrop)
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
             content(padding)
         }

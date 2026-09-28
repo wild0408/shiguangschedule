@@ -22,7 +22,7 @@ fun AndroidAppRoot() {
     }
 
     when (state.appSettings.uiStyle) {
-        AppUiStyle.MIUIX -> MiuixAndroidApp(state.appSettings)
+        AppUiStyle.MIUIX -> MiuixAndroidApp(state.appSettings, viewModel)
         AppUiStyle.MATERIAL -> App()
     }
 }

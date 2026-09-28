@@ -36,11 +36,21 @@ class DatabaseModule {
     fun provideCourseWeekDao(db: MainAppDatabase): CourseWeekDao = db.courseWeekDao()
 
     @Factory
+    fun provideTimeTableDao(db: MainAppDatabase): TimeTableDao = db.timeTableDao()
+
+    @Factory
+    fun provideCourseTimeBindingDao(db: MainAppDatabase): CourseTimeBindingDao = db.courseTimeBindingDao()
+
+    @Factory
+    fun provideTimeTableComboDao(db: MainAppDatabase): TimeTableComboDao = db.timeTableComboDao()
+
+    @Factory
     fun provideGradeDao(db: MainAppDatabase): GradeDao = db.gradeDao()
 
     @Factory
     fun provideElectricityHistoryDao(db: MainAppDatabase): ElectricityHistoryDao = db.electricityHistoryDao()
 
+    // Widget 数据库 DAO
     @Factory
     fun provideWidgetCourseDao(db: WidgetDatabase): WidgetCourseDao = db.widgetCourseDao()
 

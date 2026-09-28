@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -180,6 +183,12 @@ fun MiuixWeeklyScheduleScreen(
     var actionMenuActions by remember { mutableStateOf<List<MiuixCourseAction>>(emptyList()) }
     val style = remember(uiState.style) {
         with(ScheduleGridStyleComposed) { uiState.style.toComposedStyle() }
+    }
+    // The schedule grid normalizes the compact default time-column width for
+    // the Miuix layout. Keep the weekday header on that exact same metric so
+    // each date stays centered over its corresponding day column.
+    val effectiveTimeColumnWidth = remember(style.timeColumnWidth) {
+        if (style.timeColumnWidth == 40.dp) 36.dp else style.timeColumnWidth
     }
     val addActionIcon = vectorResource(Res.drawable.add_24px)
     val copyActionIcon = vectorResource(Res.drawable.content_copy_24px)
@@ -348,6 +357,12 @@ fun MiuixWeeklyScheduleScreen(
     }
     val isViewingCurrentWeek = uiState.weekIndexInPager == uiState.currentWeekNumber
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // Miuix Scaffold applies the system-bar/cutout insets to its body content.
+    // The header lives in the top-bar slot, so apply the same horizontal
+    // insets explicitly or it drifts from the grid on landscape devices.
+    val scheduleContentInsets = WindowInsets.systemBars
+        .union(WindowInsets.displayCutout)
+        .asPaddingValues()
     val topMenuItems = listOf(
         HyperTopBarMenuItem("week", "跳转周数", vectorResource(Res.drawable.double_arrow_24px)),
         HyperTopBarMenuItem("courses", "课程管理", vectorResource(Res.drawable.archive_24px)),
@@ -421,6 +436,9 @@ fun MiuixWeeklyScheduleScreen(
                             weekDates = uiState.pagerMondayDate,
                             firstDayOfWeek = uiState.firstDayOfWeek,
                             showWeekends = uiState.showWeekends,
+                            timeColumnWidth = effectiveTimeColumnWidth,
+                            horizontalInsets = scheduleContentInsets,
+                            layoutDirection = layoutDirection,
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .padding(top = topBarBottom),
@@ -493,7 +511,7 @@ fun MiuixWeeklyScheduleScreen(
                             onCourseLongPress = ::showCourseMenu,
                             onBlankTap = ::handleBlankTap,
                             onBlankLongPress = ::showBlankMenu,
-                            onTimeSlotClick = { onNavigate(Destination.TimeSlotSettings) },
+                            onTimeSlotClick = { onNavigate(Destination.TimeScheduleManagement) },
                             onCourseMoved = { block, day, start, end ->
                                 val currentWeek = uiState.weekIndexInPager ?: uiState.currentWeekNumber
                                 val courseId = block.courses.firstOrNull()?.course?.id
@@ -612,6 +630,9 @@ private fun WeekdayHeader(
     weekDates: LocalDate,
     firstDayOfWeek: Int,
     showWeekends: Boolean,
+    timeColumnWidth: androidx.compose.ui.unit.Dp,
+    horizontalInsets: PaddingValues,
+    layoutDirection: LayoutDirection,
     modifier: Modifier = Modifier,
 ) {
     val days = stringArrayResource(Res.array.week_days_short_names).toList()
@@ -619,10 +640,16 @@ private fun WeekdayHeader(
     val displayDays = if (showWeekends) reorderedDays else reorderedDays.take(5)
     val dates = (0 until displayDays.size).map { weekDates.plus(it.toLong(), DateTimeUnit.DAY) }
     Row(
-        modifier = modifier.fillMaxWidth().height(44.dp).padding(horizontal = 8.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .padding(
+                start = horizontalInsets.calculateStartPadding(layoutDirection),
+                end = horizontalInsets.calculateEndPadding(layoutDirection),
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.width(36.dp))
+        Spacer(Modifier.width(timeColumnWidth))
         displayDays.forEachIndexed { index, day ->
             val date = dates[index]
             val isToday = date == Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
@@ -753,4 +780,3 @@ private fun DetailLine(icon: org.jetbrains.compose.resources.DrawableResource, t
         Text(text, style = MiuixTheme.textStyles.body1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
     }
 }
-

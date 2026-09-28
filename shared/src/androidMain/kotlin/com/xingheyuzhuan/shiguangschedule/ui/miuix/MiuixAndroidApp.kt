@@ -32,6 +32,7 @@ import com.xingheyuzhuan.shiguangschedule.ui.miuix.screens.MiuixSettingsScreen
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.theme.ShiguangMiuixTheme
 import com.xingheyuzhuan.shiguangschedule.ui.components.LocalNavigationHostEnabled
 import com.xingheyuzhuan.shiguangschedule.ui.components.LocalNavigationHostPadding
+import com.xingheyuzhuan.shiguangschedule.ui.settings.SettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -51,19 +52,26 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * not part of this tree; Android can evolve independently from other targets.
  */
 @Composable
-fun MiuixAndroidApp(settings: AppSettingsModel) {
+fun MiuixAndroidApp(
+    settings: AppSettingsModel,
+    settingsViewModel: SettingsViewModel,
+) {
     ShiguangMiuixTheme(settings = settings.copy(uiStyle = AppUiStyle.MIUIX)) {
         MiuixRootNavigation(
             startDestination = when (settings.startScreen) {
                 StartScreen.TODAY_SCHEDULE -> Destination.TodaySchedule
                 StartScreen.COURSE_SCHEDULE -> Destination.CourseSchedule
-            }
+            },
+            settingsViewModel = settingsViewModel,
         )
     }
 }
 
 @Composable
-private fun MiuixRootNavigation(startDestination: Destination) {
+private fun MiuixRootNavigation(
+    startDestination: Destination,
+    settingsViewModel: SettingsViewModel,
+) {
     var selectedMain by remember { mutableStateOf(startDestination) }
     val backStack = rememberNavBackStack(
         configuration = navSavedStateConfig,
@@ -88,7 +96,9 @@ private fun MiuixRootNavigation(startDestination: Destination) {
     val courseContent = remember { movableContentOf { MiuixWeeklyScheduleScreen(::navigate, ::back, koinViewModel()) } }
     val todayContent = remember { movableContentOf { MiuixTodayScheduleScreen(::navigate, koinViewModel()) } }
     val serviceContent = remember { movableContentOf { MiuixServiceScreen(::navigate) } }
-    val settingsContent = remember { movableContentOf { MiuixSettingsScreen(::navigate, koinViewModel()) } }
+    val settingsContent = remember {
+        movableContentOf { MiuixSettingsScreen(::navigate, settingsViewModel) }
+    }
 
     val mainDestinations = listOf(
         Destination.TodaySchedule,

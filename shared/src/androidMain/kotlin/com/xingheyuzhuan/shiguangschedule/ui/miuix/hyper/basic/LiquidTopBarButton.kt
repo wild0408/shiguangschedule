@@ -1,8 +1,5 @@
 package com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.basic
 
-import android.graphics.BlurMaskFilter
-import android.graphics.Paint
-import android.graphics.Path
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -16,10 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -30,9 +24,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.graphics.toColorInt
-import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.effects.edgelight.edgeLight
-import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.effects.edgelight.rememberHyperLiquidTopBarButtonEdgeLight
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.effects.liquidglass.InteractiveHighlight
 import com.xingheyuzhuan.shiguangschedule.ui.miuix.hyper.utils.isAppDarkTheme
 import com.kyant.backdrop.Backdrop
@@ -75,7 +66,6 @@ fun HyperLiquidTopBarButton(
     val interactiveHighlight = remember(animationScope) {
         InteractiveHighlight(animationScope = animationScope)
     }
-    val shadowColor = if (isLightTheme) "#12000000".toColorInt() else "#20000000".toColorInt()
     val interactionSource = remember { MutableInteractionSource() }
 
     val touchTargetSize = maxOf(buttonHeight, MinimumTopBarButtonTouchTarget)
@@ -101,37 +91,10 @@ fun HyperLiquidTopBarButton(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(buttonHeight)
-                .drawBehind {
-                    if (shadowAlpha > 0.01f) {
-                        val blurRadius = 10f * density * shadowAlpha
-                        val shadowSpread = 2f * density * shadowAlpha
-                        val outerRadius = size.minDimension / 2f + shadowSpread
-                        val innerRadius = size.minDimension / 2f
-                        val path = Path().apply {
-                            addCircle(center.x, center.y, outerRadius, Path.Direction.CW)
-                            addCircle(center.x, center.y, innerRadius, Path.Direction.CCW)
-                        }
-                        val paint = Paint().apply {
-                            color = android.graphics.Color.argb(
-                                (android.graphics.Color.alpha(shadowColor) * 3.2f)
-                                    .coerceAtMost(255f).toInt(),
-                                android.graphics.Color.red(shadowColor),
-                                android.graphics.Color.green(shadowColor),
-                                android.graphics.Color.blue(shadowColor),
-                            )
-                            maskFilter = BlurMaskFilter(
-                                blurRadius.coerceAtLeast(0.1f),
-                                BlurMaskFilter.Blur.NORMAL,
-                            )
-                        }
-                        drawIntoCanvas { canvas -> canvas.nativeCanvas.drawPath(path, paint) }
-                    }
-                }
-                .clip(CircleShape)
-                // Keep visible press feedback inside the 42dp circular surface.
-                // The outer 48dp box is only the touch and semantics target.
+                modifier = Modifier
+                    .size(buttonHeight)
+                // Keep the touch target rectangular and apply the visual circle only after
+                // every backdrop and press layer has been composed.
                 .then(interactiveHighlight.modifier)
                 .drawBackdrop(
                     backdrop = backdrop,
@@ -158,10 +121,9 @@ fun HyperLiquidTopBarButton(
                         drawRect(Color.Black.copy(alpha = 0.03f * interactiveHighlight.pressProgress))
                     },
                 )
-                .edgeLight(
-                    shape = CircleShape,
-                    edgeLight = rememberHyperLiquidTopBarButtonEdgeLight(),
-                )
+                // Clip the complete rendered surface last so backdrop surface fills and
+                // the backdrop surface cannot leave a visible seam around the circle.
+                .clip(CircleShape)
                 .zIndex(0f),
         )
         Icon(

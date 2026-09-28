@@ -32,7 +32,7 @@ sealed interface Destination : NavKey {
     @Serializable data object Service : MainDestination
 
     // --- 二级功能页面 ---
-    @Serializable data object TimeSlotSettings : Destination
+    @Serializable data object TimeScheduleManagement : Destination
     @Serializable data object ManageCourseTables : Destination
     @Serializable data object SchoolSelectionListScreen : Destination
     @Serializable data object CourseTableConversion : Destination
@@ -78,6 +78,19 @@ sealed interface Destination : NavKey {
     data class CourseManagementDetail(
         val courseName: String
     ) : Destination
+
+    @Serializable
+    data class SingleScheduleEdit(
+        val tableId: String? = null,
+        val isPublic: Boolean = false,
+        val copyFromId: String? = null
+    ) : Destination
+
+    @Serializable
+    data class ComboScheduleEdit(
+        val comboId: String? = null,
+        val copyFromId: String? = null
+    ) : Destination
 }
 
 val Destination.isMainScreen: Boolean
@@ -95,7 +108,7 @@ val navSerializersModule = SerializersModule {
         subclass(Destination.Service::class)
 
         // 普通功能页面
-        subclass(Destination.TimeSlotSettings::class)
+        subclass(Destination.TimeScheduleManagement::class)
         subclass(Destination.ManageCourseTables::class)
         subclass(Destination.SchoolSelectionListScreen::class)
         subclass(Destination.CourseTableConversion::class)
@@ -120,6 +133,8 @@ val navSerializersModule = SerializersModule {
         subclass(Destination.WebView::class)
         subclass(Destination.AddEditCourse::class)
         subclass(Destination.CourseManagementDetail::class)
+        subclass(Destination.SingleScheduleEdit::class)
+        subclass(Destination.ComboScheduleEdit::class)
     }
 }
 

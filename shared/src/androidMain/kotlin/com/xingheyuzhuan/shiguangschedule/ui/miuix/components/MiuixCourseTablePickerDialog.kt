@@ -111,11 +111,13 @@ fun MiuixCourseTablePickerDialog(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { showAdd = true }) { Icon(vectorResource(Res.drawable.add_24px), stringResource(Res.string.a11y_add_new_table), tint = MiuixTheme.colorScheme.primary) }
                 Spacer(Modifier.weight(1f))
-                TextButton(text = stringResource(Res.string.action_cancel), onClick = onDismissRequest)
-                TextButton(text = stringResource(Res.string.action_confirm), enabled = selectedId != null, colors = ButtonDefaults.textButtonColorsPrimary(), onClick = { tables.firstOrNull { it.id == selectedId }?.let(onTableSelected) })
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(text = stringResource(Res.string.action_cancel), onClick = onDismissRequest)
+                    TextButton(text = stringResource(Res.string.action_confirm), enabled = selectedId != null, colors = ButtonDefaults.textButtonColorsPrimary(), onClick = { tables.firstOrNull { it.id == selectedId }?.let(onTableSelected) })
+                }
             }
         }
     }
@@ -127,9 +129,8 @@ fun MiuixCourseTablePickerDialog(
         WindowDialog(show = true, title = stringResource(Res.string.dialog_title_add_table), onDismissRequest = { showAdd = false; newName = "" }, insideMargin = DpSize(16.dp, 16.dp)) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextField(value = newName, onValueChange = { newName = it }, modifier = Modifier.fillMaxWidth(), label = stringResource(Res.string.label_table_name), singleLine = true)
-                Row(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)) {
                     TextButton(text = stringResource(Res.string.action_cancel), onClick = { showAdd = false })
-                    Spacer(Modifier.weight(1f))
                     TextButton(text = addLabel, enabled = newName.isNotBlank(), colors = ButtonDefaults.textButtonColorsPrimary(), onClick = {
                         if (newName.isBlank()) ToastManager.show(emptyMessage)
                         else { deps.createNewCourseTable(newName); ToastManager.show(successMessage); showAdd = false; newName = "" }

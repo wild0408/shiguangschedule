@@ -3,6 +3,7 @@ package com.xingheyuzhuan.shiguangschedule.ui.schedule
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseTableConfig
+import com.xingheyuzhuan.shiguangschedule.data.db.main.Course
 import com.xingheyuzhuan.shiguangschedule.data.db.main.CourseWithWeeks
 import com.xingheyuzhuan.shiguangschedule.data.db.main.TimeSlot
 import com.xingheyuzhuan.shiguangschedule.data.model.AppSettingsModel
@@ -72,6 +73,14 @@ data class WeeklyScheduleUiState(
     val floatingCourse: CourseWithWeeks? = null,
     val floatingSourceWeek: Int? = null
 )
+
+sealed interface PasteResult {
+    data class Success(val hasOverlap: Boolean) : PasteResult
+    data object OutsideSemester : PasteResult
+    data object NoCourseTable : PasteResult
+    data object InvalidTarget : PasteResult
+    data class Failure(val message: String) : PasteResult
+}
 
 /**
  * 规范化课程坐标的中间对象
@@ -315,6 +324,130 @@ class WeeklyScheduleViewModel(
                 }
             }
         }
+    }
+
+    /** Copies a course's display data into one target week without touching the source course. */
+    fun pasteCourseToSlot(
+        source: CourseWithWeeks,
+        targetWeek: Int,
+        targetDay: Int,
+        targetSection: Float,
+        mode: ScheduleModeProto,
+        onComplete: (PasteResult) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val result = try {
+                val state = _uiState.value
+                if (targetWeek !in 1..state.totalWeeks) {
+                    PasteResult.OutsideSemester
+                } else if (targetDay !in 1..7) {
+                    PasteResult.InvalidTarget
+                } else {
+                    val tableId = appSettingsRepository.getAppSettingsOnce().currentCourseTableId
+                    if (tableId.isBlank()) {
+                        PasteResult.NoCourseTable
+                    } else {
+                        val original = source.course
+                        val pasted = when (mode) {
+                            ScheduleModeProto.SECTION_MODE -> {
+                                val slotCount = state.timeSlots.size
+                                if (slotCount <= 0) {
+                                    PasteResult.InvalidTarget
+                                } else {
+                                    val originalStart = original.startSection ?: 1
+                                    val originalEnd = original.endSection ?: originalStart
+                                    val duration = (originalEnd - originalStart + 1).coerceAtLeast(1)
+                                    val newStart = targetSection.toInt().coerceIn(1, slotCount)
+                                    val newEnd = (newStart + duration - 1).coerceAtMost(slotCount)
+                                    val newCourse = original.copy(
+                                        id = Uuid.random().toString(),
+                                        courseTableId = tableId,
+                                        day = targetDay,
+                                        startSection = newStart,
+                                        endSection = newEnd,
+                                        isCustomTime = false,
+                                        customStartTime = null,
+                                        customEndTime = null,
+                                    )
+                                    val interval = newCourse.toOverlapInterval(state.timeSlots, mode)
+                                    val overlap = findOverlap(tableId, targetDay, targetWeek, interval, state.timeSlots, mode)
+                                    courseTableRepository.upsertCourse(newCourse, listOf(targetWeek))
+                                    PasteResult.Success(overlap)
+                                }
+                            }
+                            ScheduleModeProto.TIME_24H_MODE -> {
+                                val sourceStart = original.customStartTime?.let(LocalTime::parse)
+                                    ?: original.startSection?.let { section -> state.timeSlots.find { it.number == section }?.startTime?.let(LocalTime::parse) }
+                                    ?: LocalTime(8, 0)
+                                val sourceEnd = original.customEndTime?.let(LocalTime::parse)
+                                    ?: original.endSection?.let { section -> state.timeSlots.find { it.number == section }?.endTime?.let(LocalTime::parse) }
+                                    ?: LocalTime(9, 0)
+                                val rawDuration = sourceEnd.toSecondOfDay() - sourceStart.toSecondOfDay()
+                                val durationMinutes = (if (rawDuration <= 0) rawDuration + 24 * 60 * 60 else rawDuration).div(60).coerceAtLeast(15)
+                                val startMinutes = (targetSection * 60f).toInt().coerceIn(0, 1439)
+                                val endMinutes = (startMinutes + durationMinutes).coerceAtMost(1439)
+                                val newStart = LocalTime(startMinutes / 60, startMinutes % 60)
+                                val newEnd = LocalTime(endMinutes / 60, endMinutes % 60)
+                                val newCourse = original.copy(
+                                    id = Uuid.random().toString(),
+                                    courseTableId = tableId,
+                                    day = targetDay,
+                                    startSection = (newStart.hour + 1).coerceIn(1, 24),
+                                    endSection = (if (newEnd.minute > 0) newEnd.hour + 1 else newEnd.hour).coerceIn(1, 24),
+                                    isCustomTime = true,
+                                    customStartTime = newStart.formatToHHmm(),
+                                    customEndTime = newEnd.formatToHHmm(),
+                                )
+                                val interval = newCourse.toOverlapInterval(state.timeSlots, mode)
+                                val overlap = findOverlap(tableId, targetDay, targetWeek, interval, state.timeSlots, mode)
+                                courseTableRepository.upsertCourse(newCourse, listOf(targetWeek))
+                                PasteResult.Success(overlap)
+                            }
+                        }
+                        pasted
+                    }
+                }
+            } catch (error: Exception) {
+                PasteResult.Failure(error.message.orEmpty())
+            }
+            onComplete(result)
+        }
+    }
+
+    private suspend fun findOverlap(
+        tableId: String,
+        targetDay: Int,
+        targetWeek: Int,
+        pastedInterval: Pair<Int, Int>?,
+        timeSlots: List<TimeSlot>,
+        mode: ScheduleModeProto,
+    ): Boolean {
+        if (pastedInterval == null) return false
+        return courseTableRepository.getCoursesWithWeeksByTableId(tableId).firstOrNull().orEmpty()
+            .asSequence()
+            .filter { candidate -> candidate.course.day == targetDay && candidate.weeks.any { it.weekNumber == targetWeek } }
+            .mapNotNull { it.course.toOverlapInterval(timeSlots, mode) }
+            .any { existing -> existing.first < pastedInterval.second && existing.second > pastedInterval.first }
+    }
+
+    private fun Course.toOverlapInterval(timeSlots: List<TimeSlot>, mode: ScheduleModeProto): Pair<Int, Int>? {
+        if (mode == ScheduleModeProto.SECTION_MODE && !isCustomTime) {
+            val start = startSection ?: return null
+            val end = endSection ?: return null
+            return (start - 1) * 1000 to end * 1000
+        }
+        val startTime = customStartTime?.let(LocalTime::parse)
+            ?: startSection?.let { section -> timeSlots.find { it.number == section }?.startTime?.let(LocalTime::parse) }
+            ?: return null
+        val endTime = customEndTime?.let(LocalTime::parse)
+            ?: endSection?.let { section -> timeSlots.find { it.number == section }?.endTime?.let(LocalTime::parse) }
+            ?: return null
+        val start = if (mode == ScheduleModeProto.TIME_24H_MODE) startTime.toSecondOfDay() / 60 else ((timeToGridScale(startTime, timeSlots, mode) - 1f) * 1000).toInt()
+        val end = if (mode == ScheduleModeProto.TIME_24H_MODE) {
+            val endMinutes = endTime.toSecondOfDay() / 60
+            maxOf(endMinutes, start + 1)
+        } else ((timeToGridScale(endTime, timeSlots, mode) - 1f) * 1000).toInt()
+        return start to maxOf(end, start + 1)
     }
 
     /**
